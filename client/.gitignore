@@ -1,14 +1,17 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+jspm_packages/
+typings/
 
 # Build outputs
 dist/
+dist-ssr/
 build/
 .next/
+.svelte-kit/
 out/
-bin/
-obj/
+target/
 
 # Logs
 logs
@@ -17,11 +20,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
 # Environment variables
 .env
-.env.*
-!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
 
 # Editor / IDE
 .vscode/*
@@ -35,21 +42,29 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+*.patch
+*.diff
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
 desktop.ini
 
 # Testing
 **/coverage/
 .nyc_output/
-
-# Monorepo / Tooling
-.turbo/
-.cache/
+.parcel-cache
+.cache
 .eslintcache
+*.tsbuildinfo
 
-# Agent (Crucial)
+# Vite specific
+vite.config.ts.timestamp-*
+vite.config.js.timestamp-*
+
+# Agent / Tooling
 .agent/
 .antigravity/
+.turbo/
