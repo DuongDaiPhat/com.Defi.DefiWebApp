@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, QrCode, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import metamaskLogo from '../../assets/metamask-logo.png';
 import rabbyLogo from '../../assets/rabby-wallet-logo.svg';
@@ -8,7 +8,7 @@ import rabbyLogo from '../../assets/rabby-wallet-logo.svg';
 export interface ConnectWalletPopoverProps {
   isOpen: boolean;
   onClose: () => void;
-  onConnect: (walletId: string) => Promise<void>;
+  onConnect: (walletId: string, address: string) => Promise<void>;
 }
 
 const WALLETS = [
@@ -21,17 +21,95 @@ const WALLETS = [
 export function ConnectWalletPopover({ isOpen, onClose, onConnect }: ConnectWalletPopoverProps) {
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
   const [showOtherWallets, setShowOtherWallets] = useState(true);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   const popoverRef = useClickOutside<HTMLDivElement>(() => {
-    if (!connectingWallet) onClose(); // Ngăn tắt khi đang quay loading
+    if (!connectingWallet) onClose();
   });
+
+  // Thêm listener cho thay đổi account
+  const addWalletListener = () => {
+    if (!window.ethereum) return;
+
+    // Lắng nghe khi user thay đổi account hoặc logout
+    window.ethereum.on('accountsChanged', async (accounts: string[]) => {
+      console.log('Accounts changed:', accounts);
+      
+      if (accounts.length === 0) {
+        // User logout từ MetaMask
+        setWalletAddress(null);
+        onClose();
+      } else if (accounts[0] !== walletAddress) {
+        // User switch sang account khác
+        setWalletAddress(accounts[0]);
+        try {
+          await onConnect('metamask', accounts[0]);
+        } catch (error) {
+          console.error('Account change failed:', error);
+        }
+      }
+    });
+
+    // Lắng nghe khi chain thay đổi (optional)
+    window.ethereum.on('chainChanged', () => {
+      console.log('Chain changed, reloading...');
+      window.location.reload();
+    });
+  };
+
+  // Auto-connect khi component mount
+  useEffect(() => {
+    const autoConnect = async () => {
+      if (!window.ethereum) return;
+      
+      try {
+        const accounts = await window.ethereum.request({
+          method: 'eth_accounts'
+        });
+        
+        if (accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+          await onConnect('metamask', accounts[0]);
+        }
+      } catch (error) {
+        console.error('Auto-connect failed:', error);
+      }
+    };
+    
+    autoConnect();
+    addWalletListener(); // Thêm listener
+    
+    // Cleanup listener khi unmount
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeAllListeners?.();
+      }
+    };
+  }, [onConnect]);
+
+  const connectMetamaskWallet = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask");
+      return;
+    }
+    try {
+      setConnectingWallet('metamask');
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts"
+      });
+      setWalletAddress(accounts[0]);
+      await onConnect('metamask', accounts[0]); // ← Fix typo 'metammask' -> 'metamask'
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setConnectingWallet(null);
+    }
+  };
 
   const handleWalletClick = async (walletId: string) => {
     setConnectingWallet(walletId);
     try {
-      await onConnect(walletId);
-      // Khi connect thành công từ parent, state isConnected sẽ lật, 
-      // Navbar sẽ tự rớt xuống trạng thái connected và mất popover.
+      await onConnect(walletId, walletAddress || '');
     } catch (e) {
       console.error(e);
     } finally {
@@ -89,7 +167,9 @@ export function ConnectWalletPopover({ isOpen, onClose, onConnect }: ConnectWall
         >
           {/* Header */}
           <div className="flex justify-between items-center px-5 flex-shrink-0 pt-5 pb-3">
-            <h3 className="font-semibold text-white/90 text-[15px]">Connect a wallet</h3>
+            <h3 className="font-semibold text-white/90 text-[15px]">
+              {walletAddress? `Connected: ${walletAddress?.substring(0,6)}...${walletAddress?.substring(walletAddress.length - 4)}` : 'Connect Your Wallet'}
+            </h3>
             <button onClick={onClose} className="text-white/40 hover:text-white transition-colors" disabled={!!connectingWallet}>
               <X className="w-5 h-5" />
             </button>
@@ -97,9 +177,9 @@ export function ConnectWalletPopover({ isOpen, onClose, onConnect }: ConnectWall
 
           <div className="px-5 pb-5 overflow-hidden max-h-[70vh] space-y-3">
             
-            {/* Primary Recommended Block - Gold Gradient thay cho Hồng */}
+            {/* Primary Recommended Block */}
             <button
-              onClick={() => handleWalletClick('metamask')}
+              onClick={() => connectMetamaskWallet()}
               disabled={!!connectingWallet}
               className={`w-full relative overflow-hidden group rounded-[14px] bg-gradient-to-r from-yellow-500 to-orange-500 p-[1px] text-left transition-transform ${connectingWallet === 'metamask' ? 'scale-[0.98] opacity-80' : 'active:scale-[0.98]'}`}
             >
