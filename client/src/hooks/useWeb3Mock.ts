@@ -38,19 +38,16 @@ export function useWeb3Mock() {
   }, []);
 
   // Mock hàm connect wallet (Trả về Promise để UI bắt loading state)
-  const connect = useCallback(async (walletProvider?: string) => {
-    // Console log the selected wallet provider
-    console.log(`Connecting to: ${walletProvider || 'MetaMask'}`);
-    
+  const connect = useCallback(async (walletProvider?: string, walletAddress?: string) => {
     return new Promise<void>((resolve) => {
       setTimeout(() => {
         updateGlobalState({
           isConnected: true,
-          address: '0x4F4a1D8B4c256336B3dF620b12F5e7eb9645Ba5E',
+          address: walletAddress || '0x4F4a1D8B4c256336B3dF620b12F5e7eb9645Ba5E',
           balance: '1.542'
         });
         resolve();
-      }, 1000); // 1s loading
+      }, 1000);
     });
   }, []);
 
