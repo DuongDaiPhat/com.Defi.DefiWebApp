@@ -259,7 +259,9 @@ export function Navbar() {
                 <ConnectWalletPopover 
                   isOpen={isWalletPopoverOpen} 
                   onClose={() => setIsWalletPopoverOpen(false)} 
-                  onConnect={connect}
+                  onConnect={async (walletId, address) => {
+                    await connect(walletId, address); // ← Nhận address
+                  }}
                 />
               </div>
             )}
