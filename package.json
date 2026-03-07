@@ -1,1 +1,11 @@
-{}
+{
+  "name": "com.defi.defiwebapp",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --workspace=@defi/client",
+    "build": "npm run build --workspace=@defi/client"
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  }
+}

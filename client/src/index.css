@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors — Gold Trust + Purple Tech */
+  --color-primary: #f59e0b;
+  --color-primary-light: #fbbf24;
+  --color-accent: #8b5cf6;
+  --color-accent-light: #a78bfa;
+  --color-bg: #0f172a;
+  --color-bg-elevated: #1e293b;
+  --color-bg-card: rgba(30, 41, 59, 0.6);
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: rgba(248, 250, 252, 0.08);
+  --color-success: #10b981;
+  --color-error: #ef4444;
+
+  /* Neon Glow */
+  --glow-gold: 0 0 20px rgba(245, 158, 11, 0.3);
+  --glow-purple: 0 0 20px rgba(139, 92, 246, 0.3);
+
+  /* Typography */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  /* Spacing scale */
+  --spacing-section: 6rem;
+  --radius-card: 1rem;
+  --radius-button: 0.75rem;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-accent)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    background-color: var(--color-bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border);
+  }
+}
