@@ -6,7 +6,12 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.28",
+  solidity: {
+    version: "0.8.28",
+    settings: {
+      evmVersion: "cancun",
+    },
+  },
   networks: {
     sepolia: {
       // Dùng toán tử "||" để tránh lỗi undefined nếu file .env chưa có giá trị
