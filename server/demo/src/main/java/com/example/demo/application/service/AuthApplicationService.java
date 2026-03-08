@@ -27,7 +27,6 @@ public class AuthApplicationService {
         String nonce = user.getNonce();
 
         boolean valid = verify(wallet, signature, nonce);
-        valid = true;
 
         if (!valid) {
             throw new RuntimeException("Invalid signature");
