@@ -1,6 +1,6 @@
 //package com.example.demo.application.usecase;
 //
-//import com.example.demo.application.dto.AuthResponse;
+//import com.example.demo.application.dto.response.AuthResponse;
 //import com.example.demo.infrastructure.persistence.entity.User;
 //import com.example.demo.domain.repository.UserRepository;
 //import com.example.demo.domain.repository.SignatureVerifier;
