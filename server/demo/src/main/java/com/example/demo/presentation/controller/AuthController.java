@@ -1,6 +1,9 @@
 package com.example.demo.presentation.controller;
 
+import com.example.demo.application.dto.response.AuthResponse;
+import com.example.demo.application.dto.request.VerifySignatureRequest;
 import com.example.demo.application.dto.request.WalletRequest;
+import com.example.demo.application.service.AuthApplicationService;
 import com.example.demo.domain.repository.UserRepository;
 import com.example.demo.infrastructure.persistence.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +17,7 @@ import java.util.UUID;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final AuthApplicationService verifier;
 
     @PostMapping("/nonce")
     public String getNonce(@RequestBody WalletRequest request) {
@@ -33,5 +37,10 @@ public class AuthController {
         userRepository.save(user);
 
         return nonce;
+    }
+    @PostMapping("/verify")
+    public AuthResponse verify(@RequestBody VerifySignatureRequest request){
+        AuthResponse aa = verifier.verifySignature(request);
+        return  aa;
     }
 }
