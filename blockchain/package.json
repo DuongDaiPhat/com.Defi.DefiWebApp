@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy:local": "npx hardhat run scripts/deploy-staking.ts --network localhost"
+    "deploy:local": "npx hardhat run test/DefiStaking.test.ts --network localhost"  
   },
   "keywords": [],
   "author": "",
