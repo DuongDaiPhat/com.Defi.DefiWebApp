@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IDefiVault.sol";
 
 /**
@@ -14,6 +15,7 @@ import "./interfaces/IDefiVault.sol";
  */
 contract DefiVault is ERC20, ReentrancyGuard, IDefiVault {
     using SafeERC20 for IERC20;
+    using Math for uint256;
 
     IERC20 private immutable _asset;
 
@@ -43,6 +45,34 @@ contract DefiVault is ERC20, ReentrancyGuard, IDefiVault {
      */
     function totalAssets() public view override returns (uint256) {
         return _asset.balanceOf(address(this));
+    }
+
+    /**
+     * @dev Internal conversion logic to mitigate Inflation Attacks via Virtual Shares.
+     *      Using an offset of 10**18 guarantees robust protection even against very large donations.
+     */
+    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view returns (uint256) {
+        return assets.mulDiv(totalSupply() + 10**18, totalAssets() + 10**18, rounding);
+    }
+
+    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view returns (uint256) {
+        return shares.mulDiv(totalAssets() + 10**18, totalSupply() + 10**18, rounding);
+    }
+
+    /**
+     * @notice See {IDefiVault-previewDeposit}.
+     * @dev Simulates the amount of shares that would be minted for a given amount of assets.
+     */
+    function previewDeposit(uint256 assets) public view override returns (uint256) {
+        return _convertToShares(assets, Math.Rounding.Floor);
+    }
+
+    /**
+     * @notice See {IDefiVault-previewWithdraw}.
+     * @dev Simulates the amount of assets that would be returned for a given amount of shares.
+     */
+    function previewWithdraw(uint256 shares) public view override returns (uint256) {
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
     /**
@@ -86,32 +116,5 @@ contract DefiVault is ERC20, ReentrancyGuard, IDefiVault {
 
         emit Withdrawn(msg.sender, assets, shares);
         return assets;
-    }
-
-    /**
-     * @notice See {IDefiVault-previewDeposit}.
-     * @dev Simulates the amount of shares that would be minted for a given amount of assets.
-     */
-    function previewDeposit(uint256 assets) public view override returns (uint256) {
-        uint256 sharesTotal = totalSupply();
-        if (sharesTotal == 0) {
-            // Initial 1:1 ratio
-            return assets;
-        }
-
-        // Proportional math: shares = (assets * totalShares) / totalAssets
-        return (assets * sharesTotal) / totalAssets();
-    }
-
-    /**
-     * @notice See {IDefiVault-previewWithdraw}.
-     * @dev Simulates the amount of assets that would be returned for a given amount of shares.
-     */
-    function previewWithdraw(uint256 shares) public view override returns (uint256) {
-        uint256 sharesTotal = totalSupply();
-        if (sharesTotal == 0) return 0;
-
-        // Proportional math: assets = (shares * totalAssets) / totalShares
-        return (shares * totalAssets()) / sharesTotal;
     }
 }
