@@ -53,3 +53,7 @@ desktop.ini
 # Agent (Crucial)
 .agent/
 .antigravity/
+
+# Docs & Additional Files
+docs/
+ANTIGRAVITY.md
