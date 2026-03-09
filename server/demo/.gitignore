@@ -60,3 +60,5 @@ keystore/
 # Coverage
 /coverage/
 /jacoco.exec
+
+application.properties
