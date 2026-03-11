@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom';
-import { useWeb3Mock } from '../../hooks/useWeb3Mock';
+import { useWeb3 } from '../../hooks/useWeb3';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isConnected } = useWeb3Mock();
+  const { isConnected } = useWeb3();
 
   if (!isConnected) {
     return <Navigate to="/" replace />;

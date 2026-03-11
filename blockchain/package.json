@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "hardhat test",
     "deploy:local": "npx hardhat run test/DefiStaking.test.ts --network localhost"  
   },
   "keywords": [],
@@ -21,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.6.1"
+    "@openzeppelin/contracts": "^5.6.1",
+    "@defi/contracts": "workspace:*"
   }
 }

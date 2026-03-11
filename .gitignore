@@ -54,6 +54,27 @@ desktop.ini
 .agent/
 .antigravity/
 
+# Thư viện tải về (BẮT BUỘC)
+node_modules/
+.pnpm-debug.log*
+
+# Các file build của Hardhat
+artifacts/
+cache/
+typechain-types/
+
+# Các file môi trường (Chứa private key, API key - Tuyệt đối không đẩy lên)
+.env
+.env.local
+
+# Các file build của Frontend (React/Next.js)
+dist/
+.next/
+out/
+
+# Các file rác hệ điều hành
+.DS_Store
+Thumbs.db
 # Docs & Additional Files
 docs/
 ANTIGRAVITY.md
