@@ -12,3 +12,14 @@ pnpm install
 
 ## run fe and block chain (CMD cd com.Defi.DefiWebApp)
 pnpm run dev
+
+# compile
+cd blockchain pnpm compile
+
+## test specific smart contract
+cd blockchain
+pnpm test test/DefiStaking.test.ts
+
+# test all
+cd blockchain
+pnpm test
