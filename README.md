@@ -23,3 +23,6 @@ pnpm test test/DefiStaking.test.ts
 # test all
 cd blockchain
 pnpm test
+
+# front-end (cd com.Defi.DefiWebApp or cd client for FE only)
+pnpm run dev
