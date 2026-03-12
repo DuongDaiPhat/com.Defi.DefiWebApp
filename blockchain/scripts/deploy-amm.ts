@@ -4,18 +4,18 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // 1. Deploy Mock Tokens
-  const MockERC20 = await ethers.getContractFactory("MockERC20");
+  // 1. Deploy Tokens
+  const Token = await ethers.getContractFactory("Token");
   
-  const tokenGLD = await MockERC20.deploy("Gold Token", "GLD", deployer.address);
+  const tokenGLD = await Token.deploy(deployer.address);
   await tokenGLD.waitForDeployment();
   const addressGLD = await tokenGLD.getAddress();
-  console.log("Gold Token (GLD) deployed to:", addressGLD);
+  console.log("Token 1 (used as GLD) deployed to:", addressGLD);
 
-  const tokenSLV = await MockERC20.deploy("Silver Token", "SLV", deployer.address);
+  const tokenSLV = await Token.deploy(deployer.address);
   await tokenSLV.waitForDeployment();
   const addressSLV = await tokenSLV.getAddress();
-  console.log("Silver Token (SLV) deployed to:", addressSLV);
+  console.log("Token 2 (used as SLV) deployed to:", addressSLV);
 
   // 2. Deploy SimpleAMM
   const SimpleAMM = await ethers.getContractFactory("SimpleAMM");

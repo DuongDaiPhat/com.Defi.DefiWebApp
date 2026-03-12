@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { MockERC20, SimpleAMM } from "../typechain-types";
+import { Token, SimpleAMM } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("SimpleAMM", function () {
-  let gld: MockERC20;
-  let slv: MockERC20;
+  let gld: Token;
+  let slv: Token;
   let amm: SimpleAMM;
   let owner: HardhatEthersSigner;
   let user1: HardhatEthersSigner;
@@ -17,15 +17,15 @@ describe("SimpleAMM", function () {
   beforeEach(async function () {
     [owner, user1, user2] = await ethers.getSigners();
 
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
-    gld = await MockERC20.deploy("Gold Token", "GLD", owner.address) as unknown as MockERC20;
-    slv = await MockERC20.deploy("Silver Token", "SLV", owner.address) as unknown as MockERC20;
+    const Token = await ethers.getContractFactory("Token");
+    gld = await Token.deploy(owner.address) as unknown as Token;
+    slv = await Token.deploy(owner.address) as unknown as Token;
 
     await gld.waitForDeployment();
     await slv.waitForDeployment();
 
-    const gldAddress = await gld.getAddress();
-    const slvAddress = await slv.getAddress();
+    const gldAddress = await (gld as any).getAddress();
+    const slvAddress = await (slv as any).getAddress();
 
     const SimpleAMM = await ethers.getContractFactory("SimpleAMM");
     amm = await SimpleAMM.deploy(gldAddress, slvAddress) as unknown as SimpleAMM;
@@ -40,8 +40,8 @@ describe("SimpleAMM", function () {
 
   describe("Deployment", function () {
     it("Should set the correct tokens", async function () {
-      expect(await amm.token0()).to.equal(await gld.getAddress());
-      expect(await amm.token1()).to.equal(await slv.getAddress());
+      expect(await amm.token0()).to.equal(await (gld as any).getAddress());
+      expect(await amm.token1()).to.equal(await (slv as any).getAddress());
     });
   });
 
@@ -77,7 +77,7 @@ describe("SimpleAMM", function () {
       
       // We expect some SLV back, let's just assert the balance increases
       const slvBalanceBefore = await slv.balanceOf(user1.address);
-      await amm.connect(user1).swap(await gld.getAddress(), swapAmount, 1);
+      await amm.connect(user1).swap(await (gld as any).getAddress(), swapAmount, 1);
       const slvBalanceAfter = await slv.balanceOf(user1.address);
 
       expect(slvBalanceAfter).to.be.greaterThan(slvBalanceBefore);
@@ -93,7 +93,7 @@ describe("SimpleAMM", function () {
       const impossibleMinOut = ethers.parseUnits("2000", 18);
       
       await expect(
-        amm.connect(user1).swap(await gld.getAddress(), swapAmount, impossibleMinOut)
+        amm.connect(user1).swap(await (gld as any).getAddress(), swapAmount, impossibleMinOut)
       ).to.be.revertedWith("AMM: Insufficient output amount (Slippage)");
     });
   });
