@@ -29,6 +29,7 @@ contract DeFiPlatform is ReentrancyGuard, Pausable, Ownable {
 
     // Tổng lượng token đang được lock trong hợp đồng (tất cả user cộng lại)
     uint256 public totalStaked;
+    bool public emergencyMode;
 
     // Số dư stake của từng user
     // stakeBalance[0xABC...] = 500 → user 0xABC đang stake 500 token
@@ -178,6 +179,7 @@ contract DeFiPlatform is ReentrancyGuard, Pausable, Ownable {
         require(balance > 0, "DeFiPlatform: nothing to withdraw");
 
         totalStaked = 0; // reset tổng về 0
+        emergencyMode = true;
 
         stakingToken.safeTransfer(owner(), balance);
         emit EmergencyWithdrawn(owner(), balance);

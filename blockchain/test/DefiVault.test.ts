@@ -411,4 +411,221 @@ describe("DefiVault", function () {
       });
     });
   });
+
+  describe("Security and MEV Protection (Phase 1 & 2)", function () {
+    describe("Part 1: Access Control & Pausable", function () {
+      it("Should allow owner to pause and unpause", async function () {
+        const { defiVault, owner, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        await defiVault.connect(owner).pause();
+        expect(await defiVault.paused()).to.be.true;
+
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        await expect(defiVault.connect(user1).getFunction("deposit(uint256)")(amount)).to.be.revertedWithCustomError(defiVault, "EnforcedPause");
+
+        await defiVault.connect(owner).unpause();
+        await expect(defiVault.connect(user1).getFunction("deposit(uint256)")(amount)).to.not.be.reverted;
+      });
+
+      it("Should allow owner to emergency withdraw when paused", async function () {
+        const { defiVault, owner, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        await defiVault.connect(user1).getFunction("deposit(uint256)")(amount);
+
+        await expect(defiVault.connect(owner).emergencyWithdraw()).to.be.revertedWithCustomError(defiVault, "ExpectedPause");
+        
+        await defiVault.connect(owner).pause();
+        
+        const ownerBalBefore = await token.balanceOf(owner.address);
+        await defiVault.connect(owner).emergencyWithdraw();
+        const ownerBalAfter = await token.balanceOf(owner.address);
+
+        expect(ownerBalAfter - ownerBalBefore).to.equal(amount);
+      });
+
+      it("Should enforce max deposit and withdraw caps", async function () {
+        const { defiVault, owner, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        const maxDep = ethers.parseEther("50");
+        await defiVault.connect(owner).setMaxDeposit(maxDep);
+        
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        await expect(defiVault.connect(user1).getFunction("deposit(uint256)")(amount)).to.be.revertedWith("DefiVault: exceeds max deposit");
+
+        await defiVault.connect(user1).getFunction("deposit(uint256)")(maxDep); // works
+
+        const maxWith = ethers.parseEther("20");
+        await defiVault.connect(owner).setMaxWithdraw(maxWith);
+
+        const userShares = await defiVault.balanceOf(user1.address);
+        await expect(defiVault.connect(user1).getFunction("withdraw(uint256)")(userShares)).to.be.revertedWith("DefiVault: exceeds max withdraw");
+      });
+    });
+
+    describe("Part 2: Transaction Safety & Anti-MEV", function () {
+      it("Should revert if depositing and withdrawing in the same block", async function () {
+        const { defiVault, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        // To simulate same block in hardhat, we need to disable automine
+        await ethers.provider.send("evm_setAutomine", [false]);
+        
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        
+        const depositTx = await defiVault.connect(user1)["deposit(uint256)"](amount);
+        const withdrawTx = await defiVault.connect(user1)["withdraw(uint256)"](amount);
+
+        // Mine block
+        await ethers.provider.send("evm_mine", []);
+        
+        await depositTx.wait();
+        // The withdraw should fail
+        let reverted = false;
+        try {
+            await withdrawTx.wait();
+        } catch (e) {
+            reverted = true;
+        }
+        expect(reverted).to.be.true;
+
+        // Re-enable automine
+        await ethers.provider.send("evm_setAutomine", [true]);
+      });
+
+      it("Should revert deposit if slippage minimum shares is not met", async function () {
+        const { defiVault, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        
+        // We expect ~100 shares. If we require 101, it should revert.
+        const minShares = ethers.parseEther("101");
+        
+        let reverted = false;
+        try {
+            const tx = await defiVault.connect(user1)["deposit(uint256,uint256)"](amount, minShares);
+            await tx.wait();
+        } catch (e: any) {
+            reverted = true;
+            expect(e.message).to.include("SlippageExceeded");
+        }
+        expect(reverted).to.be.true;
+      });
+
+      it("Should revert withdraw if slippage minimum assets is not met", async function () {
+        const { defiVault, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        await defiVault.connect(user1)["deposit(uint256)"](amount);
+        
+        // Let's mine a block so same-block lock doesn't trigger
+        await ethers.provider.send("evm_mine", []);
+
+        const shares = await defiVault.balanceOf(user1.address);
+        // We expect ~100 assets. Require 101.
+        const minAssets = ethers.parseEther("101");
+        
+        let reverted = false;
+        try {
+            const tx = await defiVault.connect(user1)["withdraw(uint256,uint256)"](shares, minAssets);
+            await tx.wait();
+        } catch (e: any) {
+            reverted = true;
+            expect(e.message).to.include("SlippageExceeded");
+        }
+        expect(reverted).to.be.true;
+      });
+
+      it("Should deposit with permit in a single transaction", async function () {
+        const { defiVault, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        const amount = ethers.parseEther("100");
+        
+        const deadline = ethers.MaxUint256;
+        const nonce = await token.nonces(user1.address);
+        
+        const domain = {
+            name: await token.name(),
+            version: "1",
+            chainId: (await ethers.provider.getNetwork()).chainId,
+            verifyingContract: await token.getAddress()
+        };
+        
+        const types = {
+            Permit: [
+                { name: "owner", type: "address" },
+                { name: "spender", type: "address" },
+                { name: "value", type: "uint256" },
+                { name: "nonce", type: "uint256" },
+                { name: "deadline", type: "uint256" }
+            ]
+        };
+        
+        const value = {
+            owner: user1.address,
+            spender: withdrawAddress,
+            value: amount,
+            nonce: nonce,
+            deadline: deadline
+        };
+        
+        const signature = await user1.signTypedData(domain, types, value);
+        const sig = ethers.Signature.from(signature);
+        
+        const tx = await defiVault.connect(user1).depositWithPermit(
+            amount,
+            0, // minShares
+            deadline,
+            sig.v,
+            sig.r,
+            sig.s
+        );
+        const receipt = await tx.wait();
+        expect(receipt).to.not.be.null;
+        
+        expect(await defiVault.balanceOf(user1.address)).to.equal(amount);
+      });
+    });
+
+    describe("Part 3: ERC4626 View Functions", function () {
+      it("Should return correct values for standard view functions", async function () {
+        const { defiVault, owner, user1, token, withdrawAddress } = await loadFixture(deployWithdrawFixture);
+        
+        const amount = ethers.parseEther("100");
+        await token.connect(user1).approve(withdrawAddress, amount);
+        await defiVault.connect(user1)["deposit(uint256)"](amount);
+
+        // maxDeposit
+        let maxDep = await defiVault.maxDeposit(user1.address);
+        expect(maxDep).to.equal(ethers.MaxUint256);
+
+        await defiVault.connect(owner).setMaxDeposit(ethers.parseEther("500"));
+        maxDep = await defiVault.maxDeposit(user1.address);
+        expect(maxDep).to.equal(ethers.parseEther("500"));
+
+        // When paused, maxDeposit is 0
+        await defiVault.connect(owner).pause();
+        expect(await defiVault.maxDeposit(user1.address)).to.equal(0);
+        await defiVault.connect(owner).unpause();
+
+        // maxWithdraw and maxRedeem
+        const maxWith = await defiVault.maxWithdraw(user1.address);
+        expect(maxWith).to.equal(amount); // Because we deposited 100
+
+        const maxRedeem = await defiVault.maxRedeem(user1.address);
+        expect(maxRedeem).to.equal(amount);
+
+        // convertToShares & convertToAssets
+        const shares = await defiVault.convertToShares(ethers.parseEther("1"));
+        expect(shares).to.equal(ethers.parseEther("1"));
+
+        const assets = await defiVault.convertToAssets(ethers.parseEther("1"));
+        expect(assets).to.equal(ethers.parseEther("1"));
+      });
+    });
+  });
 });

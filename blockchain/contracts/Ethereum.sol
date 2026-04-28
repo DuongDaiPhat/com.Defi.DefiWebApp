@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
@@ -16,8 +17,8 @@ contract Ethereum is ERC20, ERC20Burnable, ERC20Permit, Ownable {
     error ExceedsMaxSupply(uint256 requested, uint256 available);
 
     constructor(address _initialOwner)
-        ERC20("StakeToken", "SKT")
-        ERC20Permit("StakeToken")
+        ERC20("EthereumToken", "ETK")
+        ERC20Permit("EthereumToken")
         Ownable(_initialOwner)
     {
         require(_initialOwner != address(0), "Ethereum: zero owner address");

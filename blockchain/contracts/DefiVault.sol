@@ -4,53 +4,42 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IDefiVault.sol";
 
-/**
- * @title DefiVault
- * @dev A decentralized ERC4626-inspired vault/withdraw contract.
- *      Users deposit an underlying asset to receive vault shares.
- *      Users burn shares to withdraw the underlying asset.
- */
-contract DefiVault is ERC20, ReentrancyGuard, IDefiVault {
+contract DefiVault is ERC20, ReentrancyGuard, Pausable, Ownable, IDefiVault {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
     IERC20 private immutable _asset;
 
-    // Custom errors for gas optimization
+    uint256 public maxDepositAmount = type(uint256).max;
+    uint256 public maxWithdrawAmount = type(uint256).max;
+
+    mapping(address => uint256) private _lastDepositBlock;
+
     error ZeroAmount();
     error ZeroShares();
     error InsufficientShares(uint256 requested, uint256 available);
+    error SameBlockWithdrawal();
+    error SlippageExceeded(uint256 actual, uint256 minimum);
 
-    /**
-     * @param asset_ The underlying ERC20 token to be deposited.
-     */
-    constructor(IERC20 asset_) ERC20("DefiVault Share", "dvSKT") {
+    constructor(IERC20 asset_) ERC20("DefiVault Share", "dvSKT") Ownable(msg.sender) {
         require(address(asset_) != address(0), "DefiVault: zero asset address");
         _asset = asset_;
     }
 
-    /**
-     * @notice See {IDefiVault-asset}.
-     */
     function asset() public view override returns (address) {
         return address(_asset);
     }
 
-    /**
-     * @notice See {IDefiVault-totalAssets}.
-     * @dev Returns the total amount of the underlying asset managed by this contract.
-     */
     function totalAssets() public view override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
-    /**
-     * @dev Internal conversion logic to mitigate Inflation Attacks via Virtual Shares.
-     *      Using an offset of 10**18 guarantees robust protection even against very large donations.
-     */
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view returns (uint256) {
         return assets.mulDiv(totalSupply() + 10**18, totalAssets() + 10**18, rounding);
     }
@@ -59,62 +48,131 @@ contract DefiVault is ERC20, ReentrancyGuard, IDefiVault {
         return shares.mulDiv(totalAssets() + 10**18, totalSupply() + 10**18, rounding);
     }
 
-    /**
-     * @notice See {IDefiVault-previewDeposit}.
-     * @dev Simulates the amount of shares that would be minted for a given amount of assets.
-     */
     function previewDeposit(uint256 assets) public view override returns (uint256) {
         return _convertToShares(assets, Math.Rounding.Floor);
     }
 
-    /**
-     * @notice See {IDefiVault-previewWithdraw}.
-     * @dev Simulates the amount of assets that would be returned for a given amount of shares.
-     */
     function previewWithdraw(uint256 shares) public view override returns (uint256) {
         return _convertToAssets(shares, Math.Rounding.Floor);
     }
 
-    /**
-     * @notice See {IDefiVault-deposit}.
-     * @dev Mints shares to the user proportional to the deposited assets.
-     */
-    function deposit(uint256 assets) public override nonReentrant returns (uint256) {
+    // ═══════════════════ CORE FUNCTIONS ═══════════════════
+
+    function deposit(uint256 assets) public override nonReentrant whenNotPaused returns (uint256) {
+        return _deposit(assets, 0);
+    }
+
+    function deposit(uint256 assets, uint256 minShares) public override nonReentrant whenNotPaused returns (uint256) {
+        return _deposit(assets, minShares);
+    }
+
+    function _deposit(uint256 assets, uint256 minShares) internal returns (uint256) {
         if (assets == 0) revert ZeroAmount();
+        require(assets <= maxDepositAmount, "DefiVault: exceeds max deposit");
 
         uint256 shares = previewDeposit(assets);
         require(shares > 0, "DefiVault: zero shares minted");
+        if (shares < minShares) revert SlippageExceeded(shares, minShares);
 
-        // EFFECTS: mint shares internally before interacting with external token
+        _lastDepositBlock[msg.sender] = block.number;
+
         _mint(msg.sender, shares);
-
-        // INTERACTIONS: pull underlying assets from user
         _asset.safeTransferFrom(msg.sender, address(this), assets);
 
         emit Deposited(msg.sender, assets, shares);
         return shares;
     }
 
-    /**
-     * @notice See {IDefiVault-withdraw}.
-     * @dev Burns user's shares and returns the proportional underlying asset.
-     */
-    function withdraw(uint256 shares) public override nonReentrant returns (uint256) {
+    function withdraw(uint256 shares) public override nonReentrant whenNotPaused returns (uint256) {
+        return _withdraw(shares, 0);
+    }
+
+    function withdraw(uint256 shares, uint256 minAssets) public override nonReentrant whenNotPaused returns (uint256) {
+        return _withdraw(shares, minAssets);
+    }
+
+    function _withdraw(uint256 shares, uint256 minAssets) internal returns (uint256) {
         if (shares == 0) revert ZeroShares();
+        if (block.number <= _lastDepositBlock[msg.sender]) revert SameBlockWithdrawal();
 
         uint256 userShares = balanceOf(msg.sender);
         if (shares > userShares) revert InsufficientShares(shares, userShares);
 
         uint256 assets = previewWithdraw(shares);
         require(assets > 0, "DefiVault: zero assets returned");
+        require(assets <= maxWithdrawAmount, "DefiVault: exceeds max withdraw");
+        if (assets < minAssets) revert SlippageExceeded(assets, minAssets);
 
-        // EFFECTS: burn shares internally before interacting with external token
         _burn(msg.sender, shares);
-
-        // INTERACTIONS: push underlying assets back to user
         _asset.safeTransfer(msg.sender, assets);
 
         emit Withdrawn(msg.sender, assets, shares);
         return assets;
+    }
+
+    function depositWithPermit(
+        uint256 assets,
+        uint256 minShares,
+        uint256 deadline,
+        uint8 v, bytes32 r, bytes32 s
+    ) external override nonReentrant whenNotPaused returns (uint256) {
+        IERC20Permit(address(_asset)).permit(
+            msg.sender,
+            address(this),
+            assets,
+            deadline,
+            v, r, s
+        );
+        return _deposit(assets, minShares);
+    }
+
+    // ═══════════════════ ADMIN FUNCTIONS ═══════════════════
+
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
+    function emergencyWithdraw() external onlyOwner whenPaused {
+        uint256 balance = _asset.balanceOf(address(this));
+        require(balance > 0, "DefiVault: nothing to withdraw");
+        _asset.safeTransfer(owner(), balance);
+        emit EmergencyWithdrawn(owner(), balance);
+    }
+
+    function setMaxDeposit(uint256 _max) external onlyOwner {
+        emit MaxDepositUpdated(maxDepositAmount, _max);
+        maxDepositAmount = _max;
+    }
+
+    function setMaxWithdraw(uint256 _max) external onlyOwner {
+        emit MaxWithdrawUpdated(maxWithdrawAmount, _max);
+        maxWithdrawAmount = _max;
+    }
+
+    // ═══════════════════ ERC4626 VIEW FUNCTIONS ═══════════════════
+
+    function maxDeposit(address) public view override returns (uint256) {
+        return paused() ? 0 : maxDepositAmount;
+    }
+
+    function maxMint(address) public view override returns (uint256) {
+        return paused() ? 0 : _convertToShares(maxDepositAmount, Math.Rounding.Floor);
+    }
+
+    function maxWithdraw(address owner_) public view override returns (uint256) {
+        if (paused()) return 0;
+        uint256 ownerAssets = _convertToAssets(balanceOf(owner_), Math.Rounding.Floor);
+        return ownerAssets < maxWithdrawAmount ? ownerAssets : maxWithdrawAmount;
+    }
+
+    function maxRedeem(address owner_) public view override returns (uint256) {
+        return paused() ? 0 : balanceOf(owner_);
+    }
+
+    function convertToShares(uint256 assets) public view override returns (uint256) {
+        return _convertToShares(assets, Math.Rounding.Floor);
+    }
+
+    function convertToAssets(uint256 shares) public view override returns (uint256) {
+        return _convertToAssets(shares, Math.Rounding.Floor);
     }
 }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -6,6 +7,7 @@ contract Wallet {
     ERC20 public token;
 
     constructor(address _tokenAddress) {
+        require(_tokenAddress != address(0), "Wallet: zero token address");
         token = ERC20(_tokenAddress);
     }
 

@@ -13,10 +13,10 @@ async function main(): Promise<void> {
   console.log("Token (SKT) deployed to:", tokenAddress);
 
   // 2. Deploy the DefiVault contract
-  const DefiVault = await ethers.getContractFactory("DefiVault");
-  const DefiVault = await DefiVault.deploy(tokenAddress);
-  await DefiVault.waitForDeployment();
-  const withdrawAddress = await DefiVault.getAddress();
+  const DefiVaultFactory = await ethers.getContractFactory("DefiVault");
+  const defiVault = await DefiVaultFactory.deploy(tokenAddress);
+  await defiVault.waitForDeployment();
+  const withdrawAddress = await defiVault.getAddress();
   console.log("DefiVault deployed to:", withdrawAddress);
 
   console.log("==========================================");
