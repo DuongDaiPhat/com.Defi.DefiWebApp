@@ -93,13 +93,13 @@ async function main(): Promise<void> {
   const stakingTokenAddr = await stakingToken.getAddress();
   console.log(`   ✅ StakingToken: ${C.green}${stakingTokenAddr}${C.reset}`);
 
-  // 3. Deploy DeFiStaking
-  deployHeader("3 / 3 — Deploy DeFiStaking");
-  const StakingFactory = await ethers.getContractFactory("DeFiStaking");
+  // 3. Deploy WalletStaking
+  deployHeader("3 / 3 — Deploy WalletStaking");
+  const StakingFactory = await ethers.getContractFactory("WalletStaking");
   const staking = await StakingFactory.deploy(stakingTokenAddr, rewardTokenAddr);
   await staking.waitForDeployment();
   const stakingAddr = await staking.getAddress();
-  console.log(`   ✅ DeFiStaking : ${C.green}${stakingAddr}${C.reset}`);
+  console.log(`   ✅ WalletStaking : ${C.green}${stakingAddr}${C.reset}`);
 
   // 4. Nạp reward pool
   sep();
@@ -166,7 +166,7 @@ async function main(): Promise<void> {
   await printBalance("Alice STK", alice.address, stakingToken, "STK");
   await printBalance("Bob   STK", bob.address,   stakingToken, "STK");
   console.log(`\n   Total staked in contract: ${C.green}${fmt(await staking.totalStaked())} STK${C.reset}`);
-  console.log(`   Reward pool remaining   : ${C.yellow}${fmt(await staking.rewardPool())} RWT${C.reset}`);
+  console.log(`   Reward pool remaining   : ${C.yellow}${fmt(await staking.rewardPoolBalance())} RWT${C.reset}`);
 
   // Time travel +30 ngày
   sep();
@@ -178,9 +178,9 @@ async function main(): Promise<void> {
   // Pending rewards
   header("PENDING REWARDS after 30 days");
   const [r0, r1, rb] = await Promise.all([
-    staking.pendingReward(alice.address, 0n),
-    staking.pendingReward(alice.address, 1n),
-    staking.pendingReward(bob.address,   0n),
+    staking.getPendingReward(alice.address, 0n),
+    staking.getPendingReward(alice.address, 1n),
+    staking.getPendingReward(bob.address,   0n),
   ]);
   console.log(`   Alice stakeId=0 (Flexible 5% ): ${C.magenta}${fmt(r0).padStart(12)} RWT${C.reset}`);
   console.log(`   Alice stakeId=1 (Silver  12%): ${C.magenta}${fmt(r1).padStart(12)} RWT${C.reset}`);
@@ -221,7 +221,7 @@ async function main(): Promise<void> {
 
   // Bob unstake
   header("BOB — Unstake from Gold pool (full reward, no penalty)");
-  const bobPending = await staking.pendingReward(bob.address, 0n);
+  const bobPending = await staking.getPendingReward(bob.address, 0n);
   console.log(`   Pending reward: ${C.magenta}${fmt(bobPending)} RWT${C.reset}`);
   await (await staking.connect(bob).unstake(0n) as ContractTransactionResponse).wait();
   console.log("   ✅ Unstaked successfully!");
@@ -241,7 +241,7 @@ async function main(): Promise<void> {
   console.log(`\n   Total claimed Alice: ${C.magenta}${fmt(aliceClaimed)} RWT${C.reset}`);
   console.log(`   Total claimed Bob  : ${C.magenta}${fmt(bobClaimed)} RWT${C.reset}`);
   console.log(`\n   Remaining staked   : ${C.green}${fmt(await staking.totalStaked())} STK${C.reset}`);
-  console.log(`   Remaining rewards  : ${C.yellow}${fmt(await staking.rewardPool())} RWT${C.reset}`);
+  console.log(`   Remaining rewards  : ${C.yellow}${fmt(await staking.rewardPoolBalance())} RWT${C.reset}`);
 
   sep();
   console.log(`${C.green}${C.bold}\n  ✅ All interactions complete!\n${C.reset}`);
