@@ -1,17 +1,57 @@
-node_modules
+# -----------------------------------------------------------------------------
+# Node & Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+.deps/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# Environment Variables
+# -----------------------------------------------------------------------------
 .env
+.env.*
+!.env.example
 
-# Hardhat files
-/cache
-/artifacts
+# -----------------------------------------------------------------------------
+# Hardhat Core
+# -----------------------------------------------------------------------------
+/cache/
+/artifacts/
 
-# TypeChain files
-/typechain
-/typechain-types
+# -----------------------------------------------------------------------------
+# TypeChain
+# -----------------------------------------------------------------------------
+/typechain/
+/typechain-types/
 
-# solidity-coverage files
-/coverage
+# -----------------------------------------------------------------------------
+# Hardhat Ignition (Deployments)
+# -----------------------------------------------------------------------------
+# Ignore local node deployments
+ignition/deployments/chain-31337/
+# Ignore deployment artifacts if needed (optional based on your workflow)
+# ignition/deployments/
+
+# -----------------------------------------------------------------------------
+# Testing & Coverage (solidity-coverage)
+# -----------------------------------------------------------------------------
+/coverage/
 /coverage.json
+coverage.html
+gasReporterOutput.json
 
-# Hardhat Ignition default folder for deployments against a local node
-ignition/deployments/chain-31337
+# -----------------------------------------------------------------------------
+# Security Analysis (Slither)
+# -----------------------------------------------------------------------------
+.venv-slither/
+.slither/
+slither_report.txt
+
+# -----------------------------------------------------------------------------
+# OS & IDE
+# -----------------------------------------------------------------------------
+.DS_Store
+.vscode/
+.idea/
