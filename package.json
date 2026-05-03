@@ -2,10 +2,13 @@
   "name": "com.defi.defiwebapp",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --workspace=@defi/client",
-    "build": "npm run build --workspace=@defi/client"
+    "dev": "pnpm --filter client dev",
+    "build": "pnpm --filter client build"
   },
   "devDependencies": {
     "turbo": "latest"
+  },
+  "dependencies": {
+    "pnpm": "^10.33.2"
   }
 }

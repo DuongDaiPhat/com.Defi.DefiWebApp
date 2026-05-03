@@ -1,9 +1,13 @@
 package com.example.demo.presentation.controller;
 
+import com.example.demo.application.dto.response.AuthResponse;
+import com.example.demo.application.dto.request.VerifySignatureRequest;
 import com.example.demo.application.dto.request.WalletRequest;
+import com.example.demo.application.service.AuthApplicationService;
 import com.example.demo.domain.repository.UserRepository;
 import com.example.demo.infrastructure.persistence.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -14,24 +18,44 @@ import java.util.UUID;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final AuthApplicationService verifier;
 
     @PostMapping("/nonce")
     public String getNonce(@RequestBody WalletRequest request) {
 
-        String wallet = request.getWalletAddress();
+        String originalWallet = request.getWalletAddress();
+        if (originalWallet == null || originalWallet.trim().isEmpty()) {
+            throw new IllegalArgumentException("Wallet address is required");
+        }
+        final String wallet = originalWallet.toLowerCase();
 
-        User user = userRepository.findByWalletAddress(wallet)
-                .orElseGet(() -> {
-                    User newUser = new User();
-                    newUser.setWalletAddress(wallet);
-                    return newUser;
-                });
+        User user;
+        try {
+            user = userRepository.findByWalletAddress(wallet)
+                    .orElseGet(() -> {
+                        User newUser = new User();
+                        newUser.setWalletAddress(wallet);
+                        return newUser;
+                    });
 
-        String nonce = UUID.randomUUID().toString();
+            String nonce = UUID.randomUUID().toString();
+            user.setNonce(nonce);
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // Handle race condition: If another thread inserted the user concurrently,
+            // fetch it
+            user = userRepository.findByWalletAddress(wallet)
+                    .orElseThrow(() -> new RuntimeException("Error fetching concurrent user creation"));
+            String nonce = UUID.randomUUID().toString();
+            user.setNonce(nonce);
+            user = userRepository.save(user);
+        }
 
-        user.setNonce(nonce);
-        userRepository.save(user);
-
-        return nonce;
+        return user.getNonce();
+    }
+    @PostMapping("/verify")
+    public AuthResponse verify(@RequestBody VerifySignatureRequest request){
+        AuthResponse aa = verifier.verifySignature(request);
+        return  aa;
     }
 }
