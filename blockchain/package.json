@@ -17,6 +17,7 @@
     "@types/node": "^25.3.3",
     "dotenv": "^17.2.3",
     "hardhat": "^2.27.0",
+    "hardhat-gas-reporter": "^2.3.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },

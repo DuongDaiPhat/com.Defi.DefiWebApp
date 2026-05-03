@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "hardhat-gas-reporter";
 import * as dotenv from "dotenv";
 
 // Khởi tạo dotenv để đọc file .env
@@ -23,6 +24,11 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY || "",
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS !== undefined,
+    reportFormat: "terminal",
+    excludeContracts: ["MockERC20", "MockVault"],
   },
 };
 
