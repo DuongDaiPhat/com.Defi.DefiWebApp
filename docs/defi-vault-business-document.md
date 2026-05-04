@@ -23,7 +23,7 @@ Trong DeFi, vault là mô hình gom tài sản của nhiều người dùng vào
 - Giao tiếp chuẩn hóa: Tuân thủ EIP-4626 giúp vault dễ dàng tích hợp với các aggregator, router và protocol khác.
 - Share accounting: Quản lý chính xác quyền sở hữu với bảo vệ lạm phát.
 - Security & MEV: Chống Flash Loan Sandwich attack và trượt giá (Slippage).
-- Sẵn sàng tích hợp Yield: Cấu trúc đã hoàn thiện để chuẩn bị kết nối với các chiến lược sinh lời (như DeFiStaking).
+- Tích hợp Yield (Strategy-Based Vault): Đã kết nối thành công với `StakingStrategyController` để tự động hóa việc staking và phân bổ lợi nhuận.
 
 ## 3. Định nghĩa cơ bản theo chuẩn ERC-4626
 
@@ -75,6 +75,19 @@ Vault cung cấp 4 phương thức tương tác chính, phân chia theo việc n
 
 ### 5.1 Nạp tiền: `deposit` vs `mint`
 
+```mermaid
+graph LR
+    subgraph DEPOSIT [deposit: Cố định Đầu vào]
+        D_In[User nhập số lượng Assets<br/>vd: 100 SKT] --> D_Calc[Vault tính Shares<br/>làm tròn XUỐNG]
+        D_Calc --> D_Out[User nhận được<br/>Shares tương ứng]
+    end
+
+    subgraph MINT [mint: Cố định Đầu ra]
+        M_In[User nhập số lượng Shares<br/>vd: muốn 50 dvSKT] --> M_Calc[Vault tính Assets<br/>làm tròn LÊN]
+        M_Calc --> M_Out[User bị trừ<br/>Assets tương ứng]
+    end
+```
+
 **`deposit(uint256 assets, uint256 minShares)`**
 - Người dùng có `100 SKT`, muốn nạp toàn bộ.
 - Vault tính toán số `dvSKT` sẽ trả về (ví dụ: `99 dvSKT`). Lượng trả về luôn được **làm tròn xuống (Floor)** để bảo vệ vault.
@@ -87,6 +100,19 @@ Vault cung cấp 4 phương thức tương tác chính, phân chia theo việc n
 
 ### 5.2 Rút tiền: `redeem` vs `withdraw`
 
+```mermaid
+graph LR
+    subgraph REDEEM [redeem: Cố định Đầu vào]
+        R_In[User nhập số lượng Shares<br/>vd: đốt 50 dvSKT] --> R_Calc[Vault tính Assets<br/>làm tròn XUỐNG]
+        R_Calc --> R_Out[User nhận được<br/>Assets tương ứng]
+    end
+
+    subgraph WITHDRAW [withdraw: Cố định Đầu ra]
+        W_In[User nhập số lượng Assets<br/>vd: muốn lấy đúng 100 SKT] --> W_Calc[Vault tính Shares<br/>làm tròn LÊN]
+        W_Calc --> W_Out[User bị đốt<br/>Shares tương ứng]
+    end
+```
+
 **`redeem(uint256 shares, uint256 minAssets)`**
 - Người dùng có `50 dvSKT`, muốn rút toàn bộ.
 - Vault tính toán số `SKT` sẽ trả về. Lượng trả về được **làm tròn xuống (Floor)**.
@@ -98,6 +124,19 @@ Vault cung cấp 4 phương thức tương tác chính, phân chia theo việc n
 - Revert nếu `shares > maxShares` hoặc user không đủ share.
 
 ### 5.3 Nạp tiền không tốn phí duyệt: `depositWithPermit`
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Wallet
+    participant Vault as DefiVault
+    
+    User->>Wallet: 1. Ký off-chain approval message (EIP-2612)
+    Wallet-->>User: 2. Trả về chữ ký (v, r, s)
+    User->>Vault: 3. Gọi depositWithPermit(assets, v, r, s)
+    Vault->>Vault: 4. Gọi permit() để xác thực quyền
+    Vault->>Vault: 5. Kéo SKT và cấp dvSKT (1 TX duy nhất)
+```
 Sử dụng chữ ký EIP-2612. Người dùng chỉ cần ký một off-chain message, sau đó đẩy lên blockchain và thực hiện nạp tiền trong cùng 1 giao dịch, tiết kiệm thao tác `approve`.
 
 ## 6. Sơ đồ tuần tự: Tích hợp Frontend
@@ -159,17 +198,19 @@ Trong bản cập nhật gần nhất, `DefiVault` đã vượt qua 44/44 test c
 4. **Slippage Protection:**
    - Các tham số `min/max` bắt buộc tx revert nếu MEV bot thao túng tỷ giá trước khi tx được mine.
 
-## 9. Phân bổ Yield (Lợi nhuận)
+## 9. Phân bổ Yield (Lợi nhuận) thông qua Strategy
 
-`DefiVault` đã sẵn sàng 100% về cấu trúc để sinh lời:
-- Nếu Vault nhận được lợi nhuận (Ví dụ: `totalAssets` tăng từ 100 lên 120, nhưng `totalSupply` vẫn là 100): Tỷ giá mỗi `dvSKT` tự động tăng lên 1.2 SKT.
-- Bất kỳ ai `redeem` sẽ nhận được phần vốn lẫn lời theo tỷ lệ sở hữu tại thời điểm đó.
+Hiện tại, `DefiVault` đã được tích hợp với hợp đồng `Staking.sol` (Strategy Module) để trở thành một Vault sinh lời tự động (Yield-Generating):
+- **Cơ chế Realized Gain:** Lợi nhuận từ quá trình staking được đưa trở lại Vault thông qua hàm `harvest()` (cơ chế donation).
+- **Tăng trưởng tỷ giá:** Khi Vault nhận được lợi nhuận (Ví dụ: `totalAssets` tăng từ 100 lên 120, nhưng `totalSupply` vẫn là 100), tỷ giá `pricePerShare` của mỗi `dvSKT` tự động tăng lên 1.2 SKT.
+- **Rút vốn và Lãi:** Bất kỳ ai gọi `redeem` hoặc `withdraw` sẽ nhận được phần vốn gốc cộng với lợi nhuận tỷ lệ thuận với số lượng Share đang nắm giữ tại thời điểm rút.
 
 ## 10. Hướng triển khai tiếp theo
 
-Sau khi nền móng ERC4626 đã vững chắc, mục tiêu tiếp theo cho WebDefi Sepolia là:
-1. **Tích hợp DeFiStaking:** Biến `DefiVault` từ một "két sắt" thụ động thành một Vault sinh lời tự động (Yield-Generating).
-2. **Strategy Module:** Viết logic tự động lấy tài sản nhàn rỗi (idle assets) đem đi Stake vào contract `DeFiStaking` để nhận APY.
+Sau khi nền móng ERC4626 đã vững chắc và hoàn tất tích hợp kiến trúc Strategy-Vault, mục tiêu tiếp theo cho WebDefi Sepolia là:
+1. **Triển khai Testnet:** Sử dụng Hardhat Ignition để deploy toàn bộ cụm Smart Contract (`DefiVault` + `Staking.sol` + `Token`) lên mạng Sepolia Testnet.
+2. **Kiểm thử Thực tế (Smoke Testing):** Thực hiện các kịch bản nạp, rút, stake, và harvest thực tế trên mạng để đảm bảo tính ổn định và tính toán gas thực tế.
+3. **Tích hợp Frontend:** Nâng cấp Web Frontend để người dùng có thể tương tác với `DefiVault` (hiển thị APY, quản lý danh mục đầu tư).
 
 ## 11. Tài liệu tham khảo chính thống
 

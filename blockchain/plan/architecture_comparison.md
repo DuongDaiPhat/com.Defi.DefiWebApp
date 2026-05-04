@@ -6,7 +6,7 @@
 
 ## 1. Phân Tích 2 Pattern Phổ Biến
 
-### 🔷 Pattern 1: Staking-Inside-Vault (Nội Bộ)
+### Pattern 1: Staking-Inside-Vault (Nội Bộ)
 
 **Mô tả:** Vault (ERC4626) tích hợp thêm logic staking bên trong. User chỉ gọi `deposit()`, Vault tự động stake số assets đó vào một giao thức bên trong.
 
@@ -29,7 +29,7 @@ User
 
 ---
 
-### 🔷 Pattern 2: External Staking + Auto-Compound vào Vault
+### Pattern 2: External Staking + Auto-Compound vào Vault
 
 **Mô tả:** Staking contract hoạt động bên ngoài, độc lập. Khi user claim reward, reward tự động được `deposit()` vào Vault thay vì trả về ví user.
 
@@ -56,16 +56,16 @@ User ──► ExternalStaking.stake()
 
 | Tiêu Chí | Pattern 1: Staking-Inside-Vault | Pattern 2: External + Auto-Compound |
 |---|---|---|
-| **Phù hợp NCKH** | ❌ Không — Quá đơn giản | ⭐⭐⭐ Trung bình |
-| **Thể hiện Composability** | ❌ Không | ⭐⭐⭐ Một phần |
+| **Phù hợp NCKH** | Không — Quá đơn giản | Trung bình |
+| **Thể hiện Composability** | Không | Một phần |
 | **Độ phức tạp kỹ thuật** | Thấp | Trung bình |
 | **Tính mới học thuật** | Rất thấp | Trung bình |
 
-> **👉 Kết luận: Cả 2 pattern phổ biến này đều CHƯA đủ giá trị cho một đề tài NCKH ở mức đại học/sau đại học. Cần một kiến trúc thể hiện rõ hơn tính nghiên cứu.**
+> **Kết luận: Cả 2 pattern phổ biến này đều CHƯA đủ giá trị cho một đề tài NCKH ở mức đại học/sau đại học. Cần một kiến trúc thể hiện rõ hơn tính nghiên cứu.**
 
 ---
 
-## 3. 🎯 Kiến Trúc Đề Xuất: "Strategy-Based Vault" (Mô hình Yearn V2/V3)
+## 3. Kiến Trúc Đề Xuất: "Strategy-Based Vault" (Mô hình Yearn V2/V3)
 
 **Tên kiến trúc:** **Vault + Strategy Layer Architecture**  
 **Cảm hứng từ:** Yearn Finance, Morpho Blue, EIP-4626
@@ -113,18 +113,18 @@ User ──► ExternalStaking.stake()
 
 ## 4. Bảng So Sánh Đầy Đủ 3 Kiến Trúc
 
-| Tiêu Chí | Pattern 1: Inside-Vault | Pattern 2: External+Compound | 🎯 Pattern 3: Strategy-Vault |
+| Tiêu Chí | Pattern 1: Inside-Vault | Pattern 2: External+Compound | Pattern 3: Strategy-Vault |
 |---|---|---|---|
 | **Độ phức tạp kỹ thuật** | Thấp | Trung bình | **Cao — phù hợp NCKH** |
-| **Tính Composability** | ❌ Không | ⭐⭐ Một phần | ✅ **Hoàn toàn** |
+| **Tính Composability** | Không | Một phần | **Hoàn toàn** |
 | **Source of Yield** | Từ Vault logic | Từ Staking reward | **Từ nhiều Strategy đa dạng** |
-| **Có thể thay Strategy** | ❌ Không | ❌ Không | ✅ **Có — không đổi Vault** |
-| **Bảo mật Vault** | Rủi ro cao (nhiều logic) | Trung bình | ✅ **Thấp — Vault nhỏ gọn** |
-| **Giá trị NCKH** | ⭐ 1/5 | ⭐⭐ 2/5 | ⭐⭐⭐⭐⭐ **5/5** |
+| **Có thể thay Strategy** | Không | Không | **Có — không đổi Vault** |
+| **Bảo mật Vault** | Rủi ro cao (nhiều logic) | Trung bình | **Thấp — Vault nhỏ gọn** |
+| **Giá trị NCKH** | 1/5 | 2/5 | **5/5** |
 | **Tính mới học thuật** | Rất thấp | Thấp | **Cao** |
 | **Benchmark được với** | Không | Một số protocol | **Yearn, Morpho, ERC4626 chuẩn** |
 | **Keywords bài báo** | Vault | Auto-compound | **Strategy Pattern, Capital Efficiency, DeFi Composability, Yield Aggregation** |
-| **Phù hợp đề tài WebDefi** | ⭐⭐ | ⭐⭐⭐ | ✅ **⭐⭐⭐⭐⭐** |
+| **Phù hợp đề tài WebDefi** | Trung bình | Khá | **Rất cao** |
 | **Testability** | Dễ | Trung bình | **Cần thiết kế test kỹ** |
 | **Gas Cost** | Thấp | Trung bình | **Cao hơn (trade-off)** |
 
@@ -176,10 +176,10 @@ User ──► ExternalStaking.stake()
 ## 6. Lý Do Kiến Trúc Này Phù Hợp Với Đề Tài NCKH
 
 ### 6.1. Thể hiện được nhiều giao thức DeFi trong 1 hệ thống:
-- ✅ **ERC4626 Vault** — Tiêu chuẩn vault của Ethereum
-- ✅ **Fixed APR Staking** — Giao thức staking cơ bản
-- ✅ **AMM (Automated Market Maker)** — `SimpleAMM.sol`
-- ✅ **Strategy Pattern** — Kiến trúc tổng hợp yield
+- **ERC4626 Vault** — Tiêu chuẩn vault của Ethereum
+- **Fixed APR Staking** — Giao thức staking cơ bản
+- **AMM (Automated Market Maker)** — `SimpleAMM.sol`
+- **Strategy Pattern** — Kiến trúc tổng hợp yield
 
 ### 6.2. Đề tài sẽ có thể trả lời các câu hỏi nghiên cứu:
 - **RQ1:** Làm thế nào để kết hợp nhiều giao thức DeFi trong 1 hệ thống thống nhất?
@@ -199,20 +199,20 @@ User ──► ExternalStaking.stake()
 
 ```
 Phase 1 (Hiện tại — MVP):
-  ✅ WalletStaking.sol — Fixed APR baseline (đã có, giữ nguyên)
-  ✅ SimpleAMM.sol — AMM cơ bản (đã có)
-  ✅ DefiVault.sol — ERC4626 standalone (đã có)
+  - WalletStaking.sol — Fixed APR baseline (đã có, giữ nguyên)
+  - SimpleAMM.sol — AMM cơ bản (đã có)
+  - DefiVault.sol — ERC4626 standalone (đã có)
 
 Phase 2 (NCKH Core — Kết hợp):
-  🔨 Refactor Staking.sol → trở thành Strategy Controller
-  🔨 Kết nối Staking.stake() → DefiVault.deposit()
-  🔨 Thêm hàm harvest() theo cơ chế direct Vault donation/realized gain
-  🔨 Viết test đầy đủ (unit + integration)
-  🔨 Deploy trên Sepolia, ghi lại gas costs
+  - Refactor Staking.sol → trở thành Strategy Controller
+  - Kết nối Staking.stake() → DefiVault.deposit()
+  - Thêm hàm harvest() theo cơ chế direct Vault donation/realized gain
+  - Viết test đầy đủ (unit + integration)
+  - Deploy trên Sepolia, ghi lại gas costs
 
 Phase 3 (NCKH Analysis):
-  📊 So sánh APY: Fixed APR (P1) vs Vault-backed (P2)
-  📊 Benchmark gas costs
-  📊 Đánh giá bảo mật: chạy Slither/MythX
-  📝 Viết phần kết quả thực nghiệm cho báo cáo NCKH
+  - So sánh APY: Fixed APR (P1) vs Vault-backed (P2)
+  - Benchmark gas costs
+  - Đánh giá bảo mật: chạy Slither/MythX
+  - Viết phần kết quả thực nghiệm cho báo cáo NCKH
 ```

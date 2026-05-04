@@ -80,31 +80,15 @@ python -m slither . --filter-paths "node_modules|contracts/test|artifacts|cache|
 
 ### Analysis Results
 
-| Hạng mục (Issue/Category) | Mức độ (Severity) | Mô tả (Description) | Giải pháp / Đánh giá (Resolution) |
+| Issue/Category | Severity | Description | Resolution / Assessment |
 |---|:---:|---|---|
-| **Lỗi bảo mật nghiêm trọng** | HIGH / MEDIUM | Không tìm thấy trong `Staking.sol` hay `DefiVault.sol`. | ✅ Pass. |
-| **Reentrancy (Benign)** | LOW / INFO | Slither phát hiện cập nhật state (vd: `totalPenalties`, `userStakes`) sau lệnh gọi external (`_vault.deposit()`, `_vault.redeem()`) trong `stake()`, `unstake()`, `emergencyWithdraw()`. | ✅ False positive. Đã tuân thủ chặt chẽ CEI pattern (chặn state chính yếu trước) và hàm đã dùng `nonReentrant` modifier bảo vệ. |
-| **Sử dụng Timestamp** | LOW | Sử dụng `block.timestamp` trong việc so sánh thời gian khóa (lock duration). | ✅ Chấp nhận được (Expected). Việc khoá lâu ngày (vd: 30 days) không bị ảnh hưởng đáng kể bởi sai lệch thao túng thời gian của miner (khoảng 15s). |
+| **Critical Security Issues** | HIGH / MEDIUM | None found in `Staking.sol` or `DefiVault.sol`. | Pass. |
+| **Reentrancy (Benign)** | LOW / INFO | Slither detected state updates (e.g., `totalPenalties`, `userStakes`) after external calls (`_vault.deposit()`, `_vault.redeem()`) in `stake()`, `unstake()`, and `emergencyWithdraw()`. | False positive. The CEI pattern is strictly followed (core states are updated first), and functions are protected by the `nonReentrant` modifier. |
+| **Timestamp Usage** | LOW | Usage of `block.timestamp` for comparing lock duration. | Expected. Long lock periods (e.g., 30 days) are not significantly affected by minor miner time manipulation (around 15s). |
 
 ### Conclusion
 The Strategy Controller and Vault contracts pass the static analysis review and are clear of critical and high-severity security issues.
 
 ---
 
-## 5. Đánh Giá Toàn Diện (Strategy-Vault vs Legacy WalletStaking)
 
-Bảng dưới đây so sánh toàn diện giữa kiến trúc Staking mới (`StakingStrategyController` + `DefiVault`) so với Staking gốc (`WalletStaking`) dựa trên các số liệu thực tế đã kiểm thử. Đây là dữ liệu quan trọng phục vụ cho nghiên cứu khoa học (NCKH).
-
-| Tiêu chí đánh giá | Staking Mới (Strategy-Vault) | Staking Gốc (Legacy WalletStaking) | Đánh giá / Phân tích |
-|---|---|---|---|
-| **1. Nguồn tạo Lợi nhuận** | **Động (Dynamic Yield):** Từ `DefiVault` thông qua tăng trưởng `pricePerShare`. Phụ thuộc vào lợi nhuận thực tế (realized gains) được inject qua `harvest()`. | **Cố định (Fixed APR):** Tính toán off-chain dựa trên công thức tĩnh $\frac{APR \times time}{365}$. | 🟢 **Mới tốt hơn:** Lợi nhuận thực tế, không lạm phát ảo. Phản ánh đúng mô hình tài chính DeFi. |
-| **2. Quản lý Tài sản** | Token được đẩy thẳng vào `DefiVault`. Strategy (`Staking.sol`) chỉ giữ **Shares** (chứng nhận cổ phần). | Token nằm chết (idle) trong contract `WalletStaking.sol`. | 🟢 **Mới tốt hơn:** Tối ưu hiệu quả sử dụng vốn (Capital Efficiency). Vault có thể đem token đi đầu tư tiếp. |
-| **3. Quy trình Stake** | User $\rightarrow$ Strategy $\rightarrow$ Vault $\rightarrow$ Shares $\rightarrow$ Lưu `StakeInfo` | User $\rightarrow$ Contract $\rightarrow$ Lưu `amount` vào `StakeInfo` | 🟡 **Gốc đơn giản hơn:** Mới yêu cầu nhiều bước cross-contract hơn (approve, deposit). |
-| **4. Phí Gas (stake)** | ~ 347,064 gas | ~ 230,963 gas | 🔴 **Gốc rẻ hơn:** Mới đắt hơn ~50.2% do phải tính toán mint shares và cập nhật state ở cả 2 contract. |
-| **5. Phí Gas (unstake)** | ~ 117,840 gas (không yield) <br> ~ 119,254 gas (có yield) | ~ 68,856 gas | 🔴 **Gốc rẻ hơn:** Mới đắt hơn ~71% do phải tính toán redeem shares sang assets. |
-| **6. Rủi ro Bảo mật tĩnh** | Cần chặn **Reentrancy** kỹ lưỡng (đã áp dụng CEI + `nonReentrant`). Rủi ro Same-block sandwich attack đã được Vault handle. | Rủi ro cạn kiệt pool thưởng (Reward Pool drain) nếu admin không nạp đủ token. | 🟢 **Mới an toàn hơn:** Tách biệt rõ ràng rủi ro sinh lời (Vault) và rủi ro sổ cái (Strategy). |
-| **7. Khả năng Mở rộng** | **Rất cao (High Composability):** Chuẩn ERC4626 cho phép tích hợp dễ dàng với Yearn, Aave, Compound. | **Thấp (Siloed):** Contract đóng, không theo chuẩn, khó kết hợp với các giao thức khác. | 🟢 **Mới tốt hơn:** Đạt chuẩn công nghiệp Web3. |
-| **8. Thông số / Tham số** | - `shares`: Đại diện principal + yield<br>- `assetsAtStake`: Dùng tính penalty<br>- `totalHarvested`: Tổng lợi nhuận sinh ra | - `amount`: Tiền gốc<br>- `rewardPoolBalance`: Quỹ thưởng<br>- `lastClaimAt`: Lần nhận thưởng cuối | 🟢 **Mới tốt hơn:** Kế toán (accounting) qua `shares` là phương pháp an toàn và chính xác nhất cho Vault. |
-
-### Tổng kết (Takeaway)
-Kiến trúc **Strategy-Vault (Mới)** đánh đổi chi phí Gas đắt hơn khoảng **50% - 70%** để đổi lấy **hiệu quả sử dụng vốn (capital efficiency)**, **tính minh bạch sinh lời (realized yield)** và **khả năng tương tác (composability)** theo chuẩn ERC4626. Sự đánh đổi này là hoàn toàn xứng đáng và phản ánh chính xác xu hướng tiến hóa của các giao thức DeFi hiện đại (như Yearn V3).
