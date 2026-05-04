@@ -1,14 +1,15 @@
 import { useLocation, Link } from 'react-router-dom';
 import { 
-  LayoutDashboard, ArrowLeftRight, Landmark,
+  LayoutDashboard, ArrowLeftRight, Landmark, Server,
   ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/swap', label: 'Swap', icon: ArrowLeftRight },
-  { path: '/stake', label: 'Staking', icon: Landmark },
+  { path: '/swap', label: 'Swap (AMM)', icon: ArrowLeftRight },
+  { path: '/vault', label: 'Vault (dvSKT)', icon: Server },
+  { path: '/stake', label: 'Strategy Direct', icon: Landmark },
 ];
 
 interface SidebarProps {

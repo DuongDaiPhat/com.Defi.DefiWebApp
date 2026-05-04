@@ -114,6 +114,23 @@ public class StakingController {
         );
         stakingApplicationService.recordClaimAction(action);
     }
+    /**
+     * Record an emergency withdraw action
+     * POST /api/staking/record-emergency
+     */
+    @PostMapping("/record-emergency")
+    public void recordEmergency(@RequestBody RecordEmergencyWithdrawRequest request) {
+        StakingActionDTO action = new StakingActionDTO(
+            "EMERGENCY_WITHDRAW",
+            request.getWalletAddress(),
+            0,
+            request.getStakeId(),
+            null,
+            null,
+            request.getTransactionHash()
+        );
+        stakingApplicationService.recordEmergencyWithdrawAction(action);
+    }
 
     // ==================== Request DTOs ====================
 

@@ -1,64 +1,143 @@
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDashboardMock } from '../hooks/useDashboardMock';
-import { SwapModule } from '../components/dashboard/SwapModule';
-import { LimitOrderModule } from '../components/dashboard/LimitOrderModule';
-import { BuySellModule } from '../components/dashboard/BuySellModule';
+import { useWeb3 } from '../hooks/useWeb3';
+import { useSimpleAMM } from '../hooks/useSimpleAMM';
+import { ethers } from 'ethers';
 
-const TABS = [
-  { key: 'swap', label: 'Swap' },
-  { key: 'limit', label: 'Limit' },
-  { key: 'buy', label: 'Buy' },
-  { key: 'sell', label: 'Sell' },
-];
+export default function SwapPage() {
+  const { isConnected, connect, tokenBalance, balance: ethBalance } = useWeb3();
+  const { ammInfo, fetchAMMInfo, getQuote, swap, isLoading } = useSimpleAMM();
+  const [amountIn, setAmountIn] = useState('');
+  const [estimatedOut, setEstimatedOut] = useState('0');
+  const [direction, setDirection] = useState<'eth_to_skt' | 'skt_to_eth'>('eth_to_skt');
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    fetchAMMInfo();
+  }, [fetchAMMInfo]);
 
-export function SwapPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'swap';
+  useEffect(() => {
+    const fetchQuote = async () => {
+      if (!amountIn || parseFloat(amountIn) <= 0) {
+        setEstimatedOut('0');
+        return;
+      }
+      try {
+        const quote = await getQuote(ethers.parseEther(amountIn).toString(), direction);
+        setEstimatedOut(ethers.formatEther(quote));
+        setError(null);
+      } catch (err: any) {
+        setEstimatedOut('0');
+        setError("Slippage or Liquidity Error: Insufficient Reserves");
+      }
+    };
+    
+    const timeout = setTimeout(fetchQuote, 500); // debounce API call
+    return () => clearTimeout(timeout);
+  }, [amountIn, direction, getQuote]);
 
-  const {
-    tokens, exchangeRate, gasEstimate,
-    slippage, setSlippage,
-    isSwapping, performSwap,
-    transactions,
-  } = useDashboardMock();
+  const handleSwap = async () => {
+    if (!amountIn) return;
+    setError(null);
+    try {
+      const minOut = parseFloat(estimatedOut) * 0.99; // 1% manual slippage from UI
+      await swap(
+        ethers.parseEther(amountIn).toString(), 
+        ethers.parseEther(minOut.toString()).toString(), 
+        direction === 'eth_to_skt'
+      );
+      setAmountIn('');
+      alert("Swap successful");
+    } catch (err: any) {
+      setError(err.message || "Swap failed");
+    }
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+        <h2 className="text-2xl font-bold mb-4">Simple AMM Swap</h2>
+        <p className="text-gray-500 mb-6">Connect your wallet to swap SKT <-> ETH</p>
+        <button onClick={() => connect()} className="bg-blue-600 text-white px-6 py-2 rounded-lg">Connect Wallet</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="py-4">
-      {/* Tab Switcher */}
-      <div className="max-w-lg mx-auto mb-6">
-        <div className="flex bg-white/5 rounded-xl p-1 gap-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setSearchParams(tab.key === 'swap' ? {} : { tab: tab.key })}
-              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                activeTab === tab.key
-                  ? 'bg-[var(--color-primary)] text-slate-950 shadow-lg'
-                  : 'text-[var(--color-text-muted)] hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className="max-w-lg mx-auto py-8">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Token Swap</h1>
+      
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        
+        {/* Switch Direction */}
+        <div className="flex justify-between items-center mb-6 bg-gray-50 p-1 rounded-lg">
+          <button 
+            className={`flex-1 py-2 font-medium rounded text-sm ${direction === 'eth_to_skt' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+            onClick={() => {setDirection('eth_to_skt'); setAmountIn('');}}
+          >
+            Buy SKT (ETH → SKT)
+          </button>
+          <button 
+            className={`flex-1 py-2 font-medium rounded text-sm ${direction === 'skt_to_eth' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}
+            onClick={() => {setDirection('skt_to_eth'); setAmountIn('');}}
+          >
+            Sell SKT (SKT → ETH)
+          </button>
         </div>
-      </div>
 
-      {/* Tab Content */}
-      {activeTab === 'swap' && (
-        <SwapModule
-          tokens={tokens}
-          exchangeRate={exchangeRate}
-          gasEstimate={gasEstimate}
-          slippage={slippage}
-          setSlippage={setSlippage}
-          isSwapping={isSwapping}
-          performSwap={performSwap}
-          transactions={transactions}
-        />
-      )}
-      {activeTab === 'limit' && <LimitOrderModule />}
-      {activeTab === 'buy' && <BuySellModule mode="buy" />}
-      {activeTab === 'sell' && <BuySellModule mode="sell" />}
+        {/* Input */}
+        <div className="mb-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex justify-between text-xs text-gray-500 mb-2">
+            <span>You pay</span>
+            <span>Balance: {direction === 'eth_to_skt' ? ethBalance : tokenBalance}</span>
+          </div>
+          <div className="flex gap-4 items-center">
+            <input 
+              type="number"
+              value={amountIn}
+              onChange={(e) => setAmountIn(e.target.value)}
+              placeholder="0.0"
+              className="bg-transparent w-full text-2xl outline-none"
+              disabled={isLoading}
+            />
+            <span className="font-semibold">{direction === 'eth_to_skt' ? 'ETH' : 'SKT'}</span>
+          </div>
+        </div>
+
+        {/* Output */}
+        <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+          <div className="flex justify-between text-xs text-blue-600 mb-2">
+            <span>You receive (Estimated)</span>
+            <span>Balance: {direction === 'eth_to_skt' ? tokenBalance : ethBalance}</span>
+          </div>
+          <div className="flex gap-4 items-center">
+            <input 
+              type="text"
+              value={estimatedOut}
+              className="bg-transparent w-full text-2xl outline-none text-blue-700"
+              readOnly
+            />
+            <span className="font-semibold text-blue-700">{direction === 'eth_to_skt' ? 'SKT' : 'ETH'}</span>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="flex justify-between text-sm text-gray-500 mb-6 px-1">
+          <span>Pool Exchange Rate</span>
+          <span>{ammInfo ? ammInfo.priceRatio : '--'}</span>
+        </div>
+
+        {error && <div className="text-red-500 mb-4 text-sm text-center">{error}</div>}
+
+        <button 
+          onClick={handleSwap}
+          disabled={isLoading || !amountIn || estimatedOut === '0' || error !== null}
+          className="w-full bg-blue-600 text-white rounded-lg py-4 font-semibold hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isLoading ? 'Processing...' : 'Confirm Swap'}
+        </button>
+
+      </div>
     </div>
   );
 }

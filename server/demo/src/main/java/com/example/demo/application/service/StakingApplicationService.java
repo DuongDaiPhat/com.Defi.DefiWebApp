@@ -163,6 +163,25 @@ public class StakingApplicationService {
     }
 
     /**
+     * Record an emergency withdraw action
+     */
+    public void recordEmergencyWithdrawAction(StakingActionDTO action) {
+        try {
+            WalletStakingRecord record = walletStakingRecordRepository
+                .findByWalletAddressAndStakeId(action.walletAddress.toLowerCase(), action.stakeId);
+            
+            if (record != null) {
+                record.setStatus(StakingStatus.EMERGENCY_WITHDRAWN);
+                record.setUnstakedTransactionHash(action.transactionHash);
+                walletStakingRecordRepository.save(record);
+                log.info("Recorded emergency withdraw action: {}", action);
+            }
+        } catch (Exception e) {
+            log.error("Failed to record emergency withdraw action", e);
+        }
+    }
+
+    /**
      * Record a claim reward action
      */
     public void recordClaimAction(StakingActionDTO action) {

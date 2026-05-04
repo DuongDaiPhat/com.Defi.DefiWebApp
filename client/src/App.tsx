@@ -7,9 +7,10 @@ import { Footer } from './components/layout/Footer';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const SwapPage = lazy(() => import('./pages/SwapPage').then(m => ({ default: m.SwapPage })));
-const StakePage = lazy(() => import('./pages/StakePage').then(m => ({ default: m.StakePage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const SwapPage = lazy(() => import('./pages/SwapPage'));
+const StakePage = lazy(() => import('./pages/StakePage'));
+const VaultPage = lazy(() => import('./pages/VaultPage'));
 
 const LoadingFallback = () => (
   <div className="min-h-screen bg-[#0c0f1e] flex items-center justify-center">
@@ -42,6 +43,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/swap" element={<SwapPage />} />
             <Route path="/stake" element={<StakePage />} />
+            <Route path="/vault" element={<VaultPage />} />
           </Route>
         </Routes>
       </Suspense>

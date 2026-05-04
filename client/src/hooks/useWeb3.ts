@@ -2,17 +2,27 @@ import { useState, useCallback, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { apiClient } from '../lib/api';
 
+import { TokenABI } from '../lib/abis/Token.abi';
+
 type Web3State = {
     isConnected: boolean;
     address: string | null;
-    balance: string;
+    balance: string; // ETH
+    tokenBalance: string; // SKT
+    chainId: number | null;
+    isWrongNetwork: boolean;
 };
 
 let globalState: Web3State = {
     isConnected: false,
     address: null,
     balance: '0.00',
+    tokenBalance: '0.00',
+    chainId: null,
+    isWrongNetwork: false,
 };
+
+let cachedProvider: ethers.BrowserProvider | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -35,12 +45,39 @@ export function useWeb3() {
         const checkConnection = async () => {
             if (window.ethereum) {
                 const provider = new ethers.BrowserProvider(window.ethereum as any);
+                cachedProvider = provider;
                 const accounts = await provider.listAccounts();
+                const network = await provider.getNetwork();
+                const chainId = Number(network.chainId);
+                const isWrongNetwork = chainId !== 11155111; // Sepolia
+                
                 if (accounts.length > 0) {
                     const address = await accounts[0].getAddress();
                     const balanceInWei = await provider.getBalance(address);
                     const balance = ethers.formatEther(balanceInWei);
-                    updateGlobalState({ isConnected: true, address, balance: parseFloat(balance).toFixed(4) });
+                    
+                    let tokenBalance = '0.00';
+                    try {
+                        const tokenAddress = import.meta.env.VITE_TOKEN_ADDRESS;
+                        if (tokenAddress) {
+                            const tokenContract = new ethers.Contract(tokenAddress, TokenABI, provider);
+                            const tkBal = await tokenContract.balanceOf(address);
+                            tokenBalance = parseFloat(ethers.formatEther(tkBal)).toFixed(4);
+                        }
+                    } catch (err) {
+                        console.error('Cannot fetch SKT token balance', err);
+                    }
+
+                    updateGlobalState({ 
+                        isConnected: true, 
+                        address, 
+                        balance: parseFloat(balance).toFixed(4),
+                        tokenBalance,
+                        chainId,
+                        isWrongNetwork
+                    });
+                } else {
+                    updateGlobalState({ chainId, isWrongNetwork });
                 }
             }
         };
@@ -96,11 +133,15 @@ export function useWeb3() {
             // Get balance
             const balanceInWei = await provider.getBalance(address);
             const balance = ethers.formatEther(balanceInWei);
+            const network = await provider.getNetwork();
+            const chainId = Number(network.chainId);
 
             updateGlobalState({
                 isConnected: true,
                 address: address,
-                balance: parseFloat(balance).toFixed(4)
+                balance: parseFloat(balance).toFixed(4),
+                chainId,
+                isWrongNetwork: chainId !== 11155111
             });
 
         } catch (error) {
@@ -122,6 +163,7 @@ export function useWeb3() {
 
     return {
         ...state,
+        provider: cachedProvider,
         formattedAddress: state.address ? formatAddress(state.address) : null,
         connect,
         disconnect
