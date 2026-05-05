@@ -1,0 +1,90 @@
+# Triển khai Backend Java cho hệ thống OSVA (Hybrid DeFi)
+
+Kế hoạch này nhằm xây dựng "Động cơ ra quyết định" (Decision Engine) và "Oracle Signer" cho hệ thống OSVA, sử dụng Java 17, Spring Boot 3.x và thư viện Web3j. Backend sẽ lấy dữ liệu từ sàn CEX, tính toán hệ số $\alpha$ (Virtual Amplification), và cấp phát chữ ký chuẩn EIP-712 để Frontend có thể gửi giao dịch lên Smart Contract.
+
+> [!IMPORTANT]
+> Tất cả phép toán tài chính phải dùng `BigDecimal` với `MathContext(10, RoundingMode.HALF_UP)` để tránh sai số thập phân. Không dùng kiểu `double` hay `float`.
+
+## User Review Required
+
+- **RPC URL & Private Key**: Xác nhận xem chuỗi RPC của Sepolia và Oracle Private Key đã được cấu hình trong `.env` của Spring Boot hay chưa.
+- **Contract Address**: Địa chỉ contract OSVAPool mới nhất trên Sepolia cần được cập nhật vào cấu hình Backend (để làm `verifyingContract` cho chữ ký EIP-712).
+- **Spring Retry**: Chúng ta sẽ bổ sung thư viện `spring-retry` và `spring-aspects` vào `pom.xml` để hỗ trợ cơ chế `@Retryable`. Bạn có đồng ý tự động thêm thư viện này không?
+
+## Proposed Changes
+
+Cấu trúc mã nguồn sẽ được chia vào các package hiện tại của hệ thống: `infrastructure`, `domain`, `application`, và `presentation`.
+
+### 1. Cấu hình & Constants (infrastructure/config)
+
+#### [NEW] `src/main/java/com/example/demo/infrastructure/config/OsvaConfig.java`
+- Tạo class `@Configuration` và `@ConfigurationProperties(prefix = "osva.market-data")` để load các biến cấu hình từ `application.yml` (demo-mode, mock-sigma, mock-depth-factor).
+- Load biến môi trường `ORACLE_PRIVATE_KEY` và `OSVA_POOL_ADDRESS`.
+- Thêm `@EnableRetry` vào class config chính hoặc `DemoApplication.java`.
+
+### 2. Quản lý Trạng thái & Cache (application/cache)
+
+#### [NEW] `src/main/java/com/example/demo/application/cache/OsvaStateCache.java`
+- Khởi tạo class `@Component` để lưu trữ memory state an toàn với Thread (dùng `AtomicReference` hoặc `volatile` cho các biến).
+- Lưu trữ các chỉ số: `currentAlpha`, `currentSigma`, `currentImbalance`.
+- Controller sẽ chỉ bốc dữ liệu từ đây thay vì gọi tính toán realtime.
+
+### 3. Thu thập dữ liệu (infrastructure/worker)
+
+#### [NEW] `src/main/java/com/example/demo/infrastructure/worker/MarketDataWorker.java`
+- Tạo một worker `@Scheduled` (chạy mỗi 10 giây).
+- Gọi public API Binance (`/api/v3/ticker/24hr`, `/api/v3/depth`).
+- Cơ chế **Fallback**: Nếu gọi API thất bại hoặc `demo-mode == true`, sử dụng dữ liệu mock từ `OsvaConfig`.
+- Gửi kết quả (`sigma`, `depth`) sang `DecisionEngineService` để tính toán lại State.
+
+#### [NEW] `src/main/java/com/example/demo/infrastructure/blockchain/Web3Worker.java`
+- Cấu hình `Web3j` kết nối Sepolia testnet.
+- Tạo một service lấy trạng thái on-chain của `OSVAPool.sol` (gọi hàm `reserve0()` và `reserve1()`).
+- **Resilience**: Áp dụng annotation `@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))` để xử lý tự động khi mạng Sepolia RPC bị timeout hoặc rate limit.
+- Gửi kết quả `reserves` sang `DecisionEngineService`.
+
+### 4. Thuật toán Ra Quyết Định (domain/service)
+
+#### [NEW] `src/main/java/com/example/demo/domain/service/DecisionEngineService.java`
+- Được trigger bởi `MarketDataWorker` hoặc `Web3Worker` khi có dữ liệu mới.
+- Áp dụng các công thức bằng `BigDecimal`:
+  - $\delta_{base} = \sigma \cdot 2.0$ (Nếu > 0.05 trả về 0)
+  - $\delta_{final} = \delta_{base} \cdot M_{imb} \cdot M_{depth}$
+  - $\alpha = (1 / \delta_{final}) - 1$
+- Ép kiểu về `long` và chặn khoảng `[0, 100]` (MAX_ALPHA = 100).
+- Lưu kết quả $\alpha$ mới nhất vào `OsvaStateCache`.
+
+### 5. Dịch vụ Chữ ký Web3 (infrastructure/security)
+
+#### [NEW] `src/main/java/com/example/demo/infrastructure/security/Eip712SignerService.java`
+- Sử dụng `web3j` (`StructuredDataEncoder` và `Sign.signMessage`).
+- Tạo JSON chuẩn EIP-712 bằng Text Blocks (`"""`) chứa `Domain Separator` và `SwapRequest` format.
+- Ký dữ liệu `(userAddress, tokenIn, amountIn, alpha, deadline)` bằng `ORACLE_PRIVATE_KEY`.
+- Trả về chữ ký hex dài 65 bytes (`v, r, s`).
+
+### 6. Lớp Giao diện (presentation & application)
+
+#### [NEW] `src/main/java/com/example/demo/application/dto/OsvaQuoteResponse.java`
+- DTO trả về chứa: `alpha`, `deadline`, `signature`, `expectedAmountOut` (optional).
+
+#### [NEW] `src/main/java/com/example/demo/presentation/controller/OsvaController.java`
+- Khởi tạo Endpoint: `GET /api/v1/osva/quote`
+- Tham số truyền vào: `userAddress`, `tokenIn`, `amountIn`.
+- Logic Realtime (Mili-giây):
+  1. Tạo `deadline = unixTimestamp() + 60`
+  2. Lấy `alpha` trực tiếp từ `OsvaStateCache` (đã được worker tính sẵn).
+  3. Gọi `Eip712SignerService` tạo `signature`
+  4. Trả về `OsvaQuoteResponse` cho Frontend ngay lập tức.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Viết Unit Test cho `DecisionEngineService` để đảm bảo các phép tính với `BigDecimal`.
+- Kiểm thử `OsvaStateCache` trong môi trường concurrent.
+
+### Manual Verification
+- Dùng công cụ Postman gọi vào `http://localhost:8080/api/v1/osva/quote?user=0x...&tokenIn=0x...&amountIn=...`. Phản hồi phải dưới 50ms nhờ Cache.
+- Copy chữ ký trả về và số `alpha`, chạy hàm test trên Hardhat xem Smart Contract `AMM_OSVA.sol` có swap thành công không.
+- Tắt giả lập mạng Sepolia để kiểm tra log Spring Boot có tự động `@Retryable` hay không.

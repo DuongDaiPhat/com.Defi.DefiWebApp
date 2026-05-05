@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.methods.response.Transaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.utils.Convert;
 
@@ -18,10 +17,10 @@ public class BlockchainServices {
     private Web3j web3j;
     public boolean verifyTransaction(String txHash, String expectedFrom, String expectedTo, String expectedAmountEth) throws Exception {
         // 1. Lấy chi tiết giao dịch từ mạng Sepolia qua Alchemy
-        Optional<Transaction> txOptional = web3j.ethGetTransactionByHash(txHash).send().getTransaction();
+        var txOptional = web3j.ethGetTransactionByHash(txHash).send().getTransaction();
 
         if (txOptional.isPresent()) {
-            Transaction tx = txOptional.get();
+            var tx = txOptional.get();
 
             // 2. Lấy biên lai (Receipt) để biết giao dịch thành công hay thất bại (Status 0x1 là thành công)
             TransactionReceipt receipt = web3j.ethGetTransactionReceipt(txHash).send().getResult();
