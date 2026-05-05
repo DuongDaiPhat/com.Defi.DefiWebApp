@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDefiVault } from '../../hooks/useDefiVault';
-import { formatDecimal, parseDecimal } from '../../lib/formatters';
+import { formatWei } from '../../lib/formatters';
 import { validateVaultInput } from '../../lib/validation';
+import { ethers } from 'ethers';
 
 export function VaultActionPanel() {
   const { vaultInfo, deposit, redeem, isLoading } = useDefiVault();
@@ -21,7 +22,7 @@ export function VaultActionPanel() {
     }
   };
 
-  const calculateSlippageMin = (estimated: string, isDeposit: boolean) => {
+  const calculateSlippageMin = (estimated: string) => {
     const estNum = parseFloat(estimated);
     // Slippage 1% (Floor rounding protection vs inflation attack)
     return Math.floor(estNum * 0.99 * 1e18).toString(); 
@@ -36,7 +37,6 @@ export function VaultActionPanel() {
     const validation = validateVaultInput(
       amount,
       balance,
-      pricePerShareNum,
       activeTab
     );
 
@@ -50,12 +50,12 @@ export function VaultActionPanel() {
       if (activeTab === 'DEPOSIT') {
         await deposit({
           amount: ethers.parseUnits(amount, 18).toString(),
-          minShares: calculateSlippageMin(estimated, true)
+          minShares: calculateSlippageMin(estimated)
         });
       } else {
         await redeem({
           shares: ethers.parseUnits(amount, 18).toString(),
-          minAssets: calculateSlippageMin(estimated, false)
+          minAssets: calculateSlippageMin(estimated)
         });
       }
       setAmount('');
@@ -95,7 +95,7 @@ export function VaultActionPanel() {
                 setAmount(e.target.value);
                 setError(null);
               }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg text-black"
               placeholder="0.0"
               disabled={isLoading || vaultInfo?.paused}
             />
@@ -109,7 +109,7 @@ export function VaultActionPanel() {
         <div className="bg-blue-50 p-3 rounded text-sm text-blue-800 space-y-1">
           <div className="flex justify-between">
             <span>Exchange Rate</span>
-            <span className="font-medium">1 dvSKT = {formatDecimal(vaultInfo?.pricePerShare || '0')} SKT</span>
+            <span className="font-medium">1 dvSKT = {formatWei(vaultInfo?.pricePerShare || '0', 6)} SKT</span>
           </div>
           <div className="flex justify-between">
             <span>Estimated Received</span>

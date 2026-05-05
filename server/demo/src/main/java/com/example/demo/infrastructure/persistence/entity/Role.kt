@@ -11,22 +11,22 @@ import jakarta.validation.constraints.Size
 import org.hibernate.annotations.Nationalized
 
 @Entity
-@Table(name = "Roles", schema = "dbo")
+@Table(name = "`Roles`", schema = "dbo")
 open class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id", nullable = false)
+    @Column(name = "`Id`", nullable = false)
     open var id: Int? = null
 
     @Size(max = 50)
     @NotNull
     @Nationalized
-    @Column(name = "Name", nullable = false, length = 50)
+    @Column(name = "`Name`", nullable = false, length = 50)
     open var name: String? = null
 
     @Size(max = 255)
     @Nationalized
-    @Column(name = "Description")
+    @Column(name = "`Description`")
     open var description: String? = null
 
 }

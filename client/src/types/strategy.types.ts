@@ -16,9 +16,10 @@ export interface UserStrategyStake {
   isActive: boolean;
   isLocked: boolean;
   lockRemainingSeconds: number;
-  stakedAt: string;
   status: string;              // ACTIVE, UNSTAKED, EMERGENCY_WITHDRAWN
   stakeTransactionHash?: string;
+  penaltyAmount: string;       // Estimated penalty if withdrawn now
+  netPayout: string;           // Estimated payout if withdrawn now
 }
 
 export interface StrategyPoolData {

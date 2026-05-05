@@ -3,15 +3,14 @@ import { ethers } from 'ethers';
 import { useWeb3 } from './useWeb3';
 import { DefiVaultABI } from '../lib/abis/DefiVault.abi';
 import { TokenABI } from '../lib/abis/Token.abi';
-import { VaultInfo, VaultDepositPayload, VaultRedeemPayload } from '../types/vault.types';
-import axios from 'axios';
+import type { VaultInfo, VaultDepositPayload, VaultRedeemPayload } from '../types/vault.types';
+import { apiClient } from '../lib/api';
 
 const VAULT_ADDRESS = import.meta.env.VITE_DEFI_VAULT_ADDRESS;
 const TOKEN_ADDRESS = import.meta.env.VITE_TOKEN_ADDRESS;
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export function useDefiVault() {
-  const { provider, account } = useWeb3();
+  const { provider, address: account } = useWeb3();
   const [vaultInfo, setVaultInfo] = useState<VaultInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +20,10 @@ export function useDefiVault() {
     try {
       setIsLoading(true);
       const url = account 
-        ? `${API_URL}/api/vault/info?address=${account}`
-        : `${API_URL}/api/vault/info`;
+        ? `/vault/info?address=${account}`
+        : `/vault/info`;
         
-      const response = await axios.get(url);
+      const response = await apiClient.get(url);
       setVaultInfo(response.data);
       setError(null);
     } catch (err: any) {
@@ -53,7 +52,7 @@ export function useDefiVault() {
       const receipt = await tx.wait();
 
       // 3. Optional: Sync to Server right away
-      await axios.post(`${API_URL}/api/vault/record`, {
+      await apiClient.post(`/vault/record`, {
         walletAddress: account,
         actionType: 'DEPOSIT',
         assets: payload.amount,
@@ -85,7 +84,7 @@ export function useDefiVault() {
       const receipt = await tx.wait();
 
       // Sync to Server
-      await axios.post(`${API_URL}/api/vault/record`, {
+      await apiClient.post(`/vault/record`, {
         walletAddress: account,
         actionType: 'REDEEM',
         assets: payload.minAssets,

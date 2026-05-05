@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useWeb3 } from '../hooks/useWeb3';
 import { useSimpleAMM } from '../hooks/useSimpleAMM';
 import { ethers } from 'ethers';
+import { formatWei } from '../lib/formatters';
 
 export default function SwapPage() {
   const { isConnected, connect, tokenBalance, balance: ethBalance } = useWeb3();
@@ -57,7 +57,7 @@ export default function SwapPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
         <h2 className="text-2xl font-bold mb-4">Simple AMM Swap</h2>
-        <p className="text-gray-500 mb-6">Connect your wallet to swap SKT <-> ETH</p>
+        <p className="text-gray-500 mb-6">Connect your wallet to swap SKT &lt;-&gt; ETH</p>
         <button onClick={() => connect()} className="bg-blue-600 text-white px-6 py-2 rounded-lg">Connect Wallet</button>
       </div>
     );
@@ -97,7 +97,7 @@ export default function SwapPage() {
               value={amountIn}
               onChange={(e) => setAmountIn(e.target.value)}
               placeholder="0.0"
-              className="bg-transparent w-full text-2xl outline-none"
+              className="bg-transparent w-full text-2xl outline-none text-black"
               disabled={isLoading}
             />
             <span className="font-semibold">{direction === 'eth_to_skt' ? 'ETH' : 'SKT'}</span>
@@ -114,7 +114,7 @@ export default function SwapPage() {
             <input 
               type="text"
               value={estimatedOut}
-              className="bg-transparent w-full text-2xl outline-none text-blue-700"
+              className="bg-transparent w-full text-2xl outline-none text-black"
               readOnly
             />
             <span className="font-semibold text-blue-700">{direction === 'eth_to_skt' ? 'SKT' : 'ETH'}</span>
@@ -124,7 +124,7 @@ export default function SwapPage() {
         {/* Info */}
         <div className="flex justify-between text-sm text-gray-500 mb-6 px-1">
           <span>Pool Exchange Rate</span>
-          <span>{ammInfo ? ammInfo.priceRatio : '--'}</span>
+          <span>{ammInfo ? formatWei(ammInfo.priceRatio, 6) : '--'}</span>
         </div>
 
         {error && <div className="text-red-500 mb-4 text-sm text-center">{error}</div>}

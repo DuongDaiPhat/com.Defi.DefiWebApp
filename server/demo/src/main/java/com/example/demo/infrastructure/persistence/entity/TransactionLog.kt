@@ -14,38 +14,38 @@ import java.math.BigDecimal
 import java.time.Instant
 
 @Entity
-@Table(name = "TransactionLogs", schema = "dbo")
+@Table(name = "`TransactionLogs`", schema = "dbo")
 open class TransactionLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id", nullable = false)
+    @Column(name = "`Id`", nullable = false)
     open var id: Long? = null
 
     @Size(max = 255)
     @NotNull
     @Nationalized
-    @Column(name = "TxHash", nullable = false)
+    @Column(name = "`TxHash`", nullable = false)
     open var txHash: String? = null
 
     @Size(max = 100)
     @NotNull
     @Nationalized
-    @Column(name = "ActionType", nullable = false, length = 100)
+    @Column(name = "`ActionType`", nullable = false, length = 100)
     open var actionType: String? = null
 
-    @Column(name = "Amount", precision = 38, scale = 18)
+    @Column(name = "`Amount`", precision = 38, scale = 18)
     open var amount: BigDecimal? = null
 
     @Size(max = 20)
     @NotNull
     @Nationalized
     @ColumnDefault("'PENDING'")
-    @Column(name = "Status", nullable = false, length = 20)
+    @Column(name = "`Status`", nullable = false, length = 20)
     open var status: String? = null
 
     @NotNull
     @ColumnDefault("getdate()")
-    @Column(name = "CreatedAt", nullable = false)
+    @Column(name = "`CreatedAt`", nullable = false, columnDefinition = "datetime2")
     open var createdAt: Instant? = null
 
 }

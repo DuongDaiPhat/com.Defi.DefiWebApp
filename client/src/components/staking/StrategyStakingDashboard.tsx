@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStakingStrategy } from '../../hooks/useStakingStrategy';
 import { formatNumber } from '../../lib/formatters';
-import { validateStakeInput } from '../../lib/validation';
+import { validateStake } from '../../lib/validation';
+import { useWeb3 } from '../../hooks/useWeb3';
+import { ethers } from 'ethers';
 
 export function StrategyStakingDashboard({ pool }: { pool: any }) {
+  const { isConnected, chainId, tokenBalance } = useWeb3();
   const { stake, isLoading } = useStakingStrategy();
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleStake = async () => {
     setError(null);
-    const balance = '99999999'; // TODO: integrate real balance
-    validation = validateStakeInput(amount, balance, pool.minStake, pool.maxStake);
+    const validation = validateStake({
+      isConnected,
+      chainId,
+      pool,
+      amount,
+      userSktBalance: BigInt(tokenBalance.replace(/,/g, '').split('.')[0] || '0') * BigInt(10**18) // Estimate Wei
+    });
     
-    if (!validation.isValid) {
-      setError(validation.error);
+    if (!validation.ok) {
+      setError(validation.message || 'Validation failed');
       return;
     }
 
@@ -54,7 +62,7 @@ export function StrategyStakingDashboard({ pool }: { pool: any }) {
           value={amount}
           onChange={(e) => { setAmount(e.target.value); setError(null); }}
           placeholder="Amount SKT to stake"
-          className="flex-1 px-4 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+          className="flex-1 px-4 py-2 border rounded focus:ring-blue-500 focus:border-blue-500 text-black"
           disabled={isLoading || !pool.isActive}
         />
         <button 

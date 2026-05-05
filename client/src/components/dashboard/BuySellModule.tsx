@@ -58,7 +58,7 @@ export function BuySellModule({ mode }: BuySellModuleProps) {
               type="number"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              className="bg-transparent text-3xl font-bold text-white outline-none min-w-0 flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="bg-transparent text-3xl font-bold text-black outline-none min-w-0 flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               placeholder="0.0"
             />
             {isBuy ? (

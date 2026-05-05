@@ -72,7 +72,7 @@ export function LimitOrderModule() {
             type="number"
             value={price}
             onChange={e => setPrice(e.target.value)}
-            className="bg-transparent text-3xl font-bold text-white outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="bg-transparent text-3xl font-bold text-black outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             placeholder="0.0"
           />
         </div>
@@ -84,7 +84,7 @@ export function LimitOrderModule() {
             type="number"
             value={amount}
             onChange={e => setAmount(e.target.value)}
-            className="bg-transparent text-3xl font-bold text-white outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="bg-transparent text-3xl font-bold text-black outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             placeholder="0.0"
           />
         </div>

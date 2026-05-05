@@ -3,11 +3,10 @@ import { ethers } from 'ethers';
 import { useWeb3 } from './useWeb3';
 import { SimpleAMMABI } from '../lib/abis/SimpleAMM.abi';
 import { TokenABI } from '../lib/abis/Token.abi';
-import axios from 'axios';
+import { apiClient } from '../lib/api';
 
 const AMM_ADDRESS = import.meta.env.VITE_SIMPLE_AMM_ADDRESS;
 const TOKEN_ADDRESS = import.meta.env.VITE_TOKEN_ADDRESS;
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 export interface AMMInfo {
   reserve0: string; // ETH (Mock)
@@ -16,7 +15,7 @@ export interface AMMInfo {
 }
 
 export function useSimpleAMM() {
-  const { provider, account } = useWeb3();
+  const { provider, address: account } = useWeb3();
   const [ammInfo, setAmmInfo] = useState<AMMInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +23,7 @@ export function useSimpleAMM() {
   const fetchAMMInfo = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${API_URL}/api/amm/info`);
+      const res = await apiClient.get('/amm/info');
       setAmmInfo(res.data);
     } catch (err) {
       console.error(err);
@@ -36,7 +35,7 @@ export function useSimpleAMM() {
   // GET QUOTE: Server endpoint
   const getQuote = async (amountIn: string, direction: 'eth_to_skt' | 'skt_to_eth') => {
     try {
-      const res = await axios.get(`${API_URL}/api/amm/quote?amountIn=${amountIn}&direction=${direction}`);
+      const res = await apiClient.get(`/amm/quote?amountIn=${amountIn}&direction=${direction}`);
       return res.data;
     } catch (err) {
       console.error("Quote error", err);

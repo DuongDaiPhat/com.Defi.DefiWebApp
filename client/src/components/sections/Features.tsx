@@ -24,7 +24,7 @@ function MockSwapUI() {
             type="text" 
             value="1.0" 
             readOnly 
-            className="bg-transparent text-2xl font-bold text-white outline-none w-1/2"
+            className="bg-transparent text-2xl font-bold text-black outline-none w-1/2"
           />
           <div className="flex items-center gap-2 bg-slate-800 rounded-lg px-2 py-1">
             <div className="w-5 h-5 rounded-full bg-blue-500" />
@@ -49,7 +49,7 @@ function MockSwapUI() {
             type="text" 
             value="2540.50" 
             readOnly 
-            className="bg-transparent text-2xl font-bold text-white outline-none w-1/2"
+            className="bg-transparent text-2xl font-bold text-black outline-none w-1/2"
           />
           <div className="flex items-center gap-2 bg-[var(--color-primary)]/20 rounded-lg px-2 py-1 border border-[var(--color-primary)]/30">
             <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] flex items-center justify-center font-bold text-[10px] text-white">D</div>

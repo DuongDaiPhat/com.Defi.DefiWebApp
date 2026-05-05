@@ -16,6 +16,38 @@ import { formatUnits } from 'ethers';
 // ============================================================
 
 /**
+ * Format số thông thường với dấu phẩy phân cách hàng nghìn
+ * @example formatNumber(1234.56) → "1,234.56"
+ */
+export const formatNumber = (num: number | string | undefined | null, decimals = 2): string => {
+  if (num === undefined || num === null) return '0';
+  const n = typeof num === 'string' ? parseFloat(num) : num;
+  if (isNaN(n)) return '0';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  }).format(n);
+};
+
+/**
+ * Format giá trị Wei (string hoặc bigint) sang ETH unit (chia cho 10^18)
+ * @example formatWei("1000000000000000000") → "1.0000"
+ */
+export const formatWei = (wei: string | bigint | undefined | null, decimals = 4): string => {
+  if (wei === undefined || wei === null) return '0';
+  try {
+    // Chuyển sang BigInt an toàn (bỏ phần thập phân nếu có trong chuỗi)
+    const weiStr = typeof wei === 'string' ? wei.split('.')[0] : wei.toString();
+    const val = BigInt(weiStr);
+    const eth = formatUnits(val, 18);
+    return formatNumber(eth, decimals);
+  } catch (err) {
+    console.error('formatWei error', err);
+    return '0';
+  }
+};
+
+/**
  * Format số lượng token từ wei (bigint) ra string đọc được
  * @example fmtToken(1234567890000000000000n, 'SKT') → "1,234.5678 SKT"
  */
@@ -239,6 +271,22 @@ export const GAS_ESTIMATES = {
 export const fmtGasEstimate = (gasUnits: bigint, gasPriceGwei = 10): string => {
   const costEth = (Number(gasUnits) * gasPriceGwei) / 1e9;
   return `~${costEth.toFixed(5)} ETH`;
+};
+
+/**
+ * Format số thập phân với dấu phẩy phân cách hàng nghìn (Alias cho formatNumber)
+ */
+export const formatDecimal = (num: number | string | undefined | null, decimals = 2): string => {
+  return formatNumber(num, decimals);
+};
+
+/**
+ * Parse chuỗi số sang kiểu số thực an toàn
+ */
+export const parseDecimal = (num: string | undefined | null): number => {
+  if (!num) return 0;
+  const n = parseFloat(num);
+  return isNaN(n) ? 0 : n;
 };
 
 // ============================================================

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { StakingPool } from '../../types/staking.types';
+import { useState, useMemo } from 'react';
+import type { StakingPool } from '../../types/staking.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { AlertCircle, Plus } from 'lucide-react';
@@ -137,7 +137,7 @@ export function StakingForm({ pools, onStake, isLoading = false, error }: Stakin
               min="0"
               step="0.01"
               disabled={isLoading}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-[var(--color-primary-light)] disabled:opacity-50"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-black placeholder-white/30 focus:outline-none focus:border-[var(--color-primary-light)] disabled:opacity-50"
             />
             <span className="absolute right-4 top-3 text-white/50 text-sm">DFI</span>
           </div>

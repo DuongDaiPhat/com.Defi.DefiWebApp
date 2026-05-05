@@ -12,34 +12,34 @@ import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
 import java.time.Instant
 @Entity
-@Table(name = "Users", schema = "dbo")
+@Table(name = "`Users`", schema = "dbo")
 open class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Id", nullable = false)
+    @Column(name = "`Id`", nullable = false)
     open var id: Long? = null
 
-    @Column(name = "Wallet_Address", nullable = false, length = 100)
+    @Column(name = "`Wallet_Address`", nullable = false, length = 100)
     open var walletAddress: String? = null
 
-    @Column(name = "Nonce")
+    @Column(name = "`Nonce`")
     open var nonce: String? = null
 
-    @Column(name = "Role", nullable = false, length = 50)
+    @Column(name = "`Role`", nullable = false, length = 50)
     open var role: String? = "USER"
 
-    @Column(name = "Status", nullable = false, length = 20)
+    @Column(name = "`Status`", nullable = false, length = 20)
     open var status: String? = "ACTIVE"
 
-    @Column(name = "Created_At", nullable = false)
+    @Column(name = "`Created_At`", nullable = false, columnDefinition = "datetime2")
     open var createdAt: Instant? = null
 
-    @Column(name = "Updated_At")
+    @Column(name = "`Updated_At`", columnDefinition = "datetime2")
     open var updatedAt: Instant? = null
 
     @OneToMany
-    @JoinColumn(name = "UserId")
+    @JoinColumn(name = "`UserId`")
     open var transactionLogs: MutableSet<TransactionLog> = mutableSetOf()
 
     @PrePersist

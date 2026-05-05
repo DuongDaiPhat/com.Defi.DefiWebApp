@@ -12,7 +12,7 @@
  */
 
 import { parseUnits, formatUnits } from 'ethers';
-import type { StrategyPool, StrategyStake } from '../types/strategy.types';
+import type { StrategyPoolData as StrategyPool, UserStrategyStake as StrategyStake } from '../types/strategy.types';
 
 // ============================================================
 // Core Type
@@ -196,6 +196,35 @@ export const validateVaultMaxRedeem = (shares: string, maxRedeem: bigint): Valid
   }
 };
 
+/**
+ * Unified entry point for Vault Action Panel (Deposit/Redeem)
+ * Trả về { isValid, error } để tương thích với VaultActionPanel.tsx
+ */
+export const validateVaultInput = (
+  amount: string,
+  balance: string,
+  mode: 'DEPOSIT' | 'REDEEM'
+): { isValid: boolean; error: string | null } => {
+  const amountRes = validatePositiveAmount(amount, mode === 'DEPOSIT' ? 'SKT' : 'shares');
+  if (!amountRes.ok) return { isValid: false, error: amountRes.message || null };
+
+  try {
+    const amountWei = parseUnits(amount, 18);
+    const balanceWei = BigInt(balance);
+
+    if (amountWei > balanceWei) {
+      return { 
+        isValid: false, 
+        error: `Số dư không đủ. Tối đa: ${parseFloat(formatUnits(balanceWei, 18)).toFixed(4)} ${mode === 'DEPOSIT' ? 'SKT' : 'dvSKT'}` 
+      };
+    }
+  } catch {
+    return { isValid: false, error: 'Số lượng không hợp lệ' };
+  }
+
+  return { isValid: true, error: null };
+};
+
 // --- Composite Vault Validators ---
 
 export interface VaultDepositParams {
@@ -347,7 +376,7 @@ export const validateStake = (p: StakeParams): ValidationResult =>
       if (!p.pool) return { ok: true };
       try {
         const amountWei = parseUnits(p.amount, 18);
-        if (amountWei < p.pool.minStake) {
+        if (amountWei < BigInt(p.pool.minStake)) {
           const minFormatted = parseFloat(formatUnits(p.pool.minStake, 18)).toFixed(2);
           return { ok: false, message: `Số tiền tối thiểu để stake là ${minFormatted} SKT` };
         }
@@ -356,10 +385,10 @@ export const validateStake = (p: StakeParams): ValidationResult =>
     })(),
     // maxStake (0 = không giới hạn)
     (() => {
-      if (!p.pool || p.pool.maxStake === BigInt(0)) return { ok: true };
+      if (!p.pool || p.pool.maxStake === '0') return { ok: true };
       try {
         const amountWei = parseUnits(p.amount, 18);
-        if (amountWei > p.pool.maxStake) {
+        if (amountWei > BigInt(p.pool.maxStake)) {
           const maxFormatted = parseFloat(formatUnits(p.pool.maxStake, 18)).toFixed(2);
           return { ok: false, message: `Số tiền tối đa mỗi vị thế là ${maxFormatted} SKT` };
         }
