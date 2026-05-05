@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const stakingToken = await TokenFactory.deploy(deployer.address);
   await stakingToken.waitForDeployment();
 
-  const StakingFactory = await ethers.getContractFactory("DeFiStaking");
+  const StakingFactory = await ethers.getContractFactory("WalletStaking");
   const staking = await StakingFactory.deploy(
     await stakingToken.getAddress(),
     await rewardToken.getAddress()
