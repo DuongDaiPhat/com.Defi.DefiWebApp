@@ -47,7 +47,6 @@ desktop.ini
 
 # Monorepo / Tooling
 .turbo/
-.cache/
 .eslintcache
 
 # Agent (Crucial)
