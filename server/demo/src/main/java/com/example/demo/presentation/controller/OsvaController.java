@@ -1,7 +1,7 @@
 package com.example.demo.presentation.controller;
 
-import com.example.demo.application.cache.OsvaStateCache;
 import com.example.demo.application.dto.OsvaQuoteResponse;
+import com.example.demo.application.statecache.OsvaStateCache;
 import com.example.demo.infrastructure.security.Eip712SignerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,6 +1,6 @@
 package com.example.demo.presentation.controller;
 
-import com.example.demo.application.cache.OsvaStateCache;
+import com.example.demo.application.statecache.OsvaStateCache;
 import com.example.demo.infrastructure.security.Eip712SignerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

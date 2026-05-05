@@ -1,6 +1,6 @@
 package com.example.demo.domain.service;
 
-import com.example.demo.application.cache.OsvaStateCache;
+import com.example.demo.application.statecache.OsvaStateCache;
 import com.example.demo.infrastructure.config.OsvaConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

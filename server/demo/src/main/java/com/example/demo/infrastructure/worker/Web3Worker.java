@@ -1,6 +1,6 @@
 package com.example.demo.infrastructure.worker;
 
-import com.example.demo.application.cache.OsvaStateCache;
+import com.example.demo.application.statecache.OsvaStateCache;
 import com.example.demo.domain.service.DecisionEngineService;
 import com.example.demo.infrastructure.config.OsvaConfig;
 import org.slf4j.Logger;
