@@ -44,23 +44,21 @@ contract WalletStaking is Ownable, ReentrancyGuard, Pausable {
     //  STATE VARIABLES
     // ============================================================
 
-    IERC20 public immutable stakingToken;
-    IERC20 public immutable rewardToken;
+    IERC20 public immutable stakingToken;                          // Token để stake
+    IERC20 public immutable rewardToken;                           // Token phát thưởng
 
-    uint256 public constant BASIS_POINTS = 10_000;
-    uint256 public constant SECONDS_IN_YEAR = 365 days;
+    uint256 public constant BASIS_POINTS = 10_000;                 // Đơn vị % (10000 = 100%)
+    uint256 public constant SECONDS_IN_YEAR = 365 days;            // Số giây trong 1 năm
+    
+    uint256 public totalRewardDebt;                                // Biến state để theo dõi tổng nợ reward                                  
+    uint256 public totalStaked;                                    // Tổng token đã stake
+    uint256 public rewardPoolBalance;                              // Số dư pool thưởng
 
-    uint256 public totalStaked;
-    uint256 public rewardPoolBalance;
+    StakingPool[] public pools;                                    // Danh sách các pool staking
 
-    StakingPool[] public pools;
-
-    // user => stakeId => StakeInfo
-    mapping(address => mapping(uint256 => StakeInfo)) public userStakes;
-    // user => tổng số lần stake
-    mapping(address => uint256) public userStakeCount;
-    // user => tổng reward đã nhận
-    mapping(address => uint256) public totalRewardClaimed;
+    mapping(address => mapping(uint256 => StakeInfo)) public userStakes;         // Thông tin stake của user
+    mapping(address => uint256) public userStakeCount;             // Số lượt stake của user
+    mapping(address => uint256) public totalRewardClaimed;         // Tổng reward đã nhận
 
     // ============================================================
     //  EVENTS
@@ -86,6 +84,7 @@ contract WalletStaking is Ownable, ReentrancyGuard, Pausable {
     error InsufficientRewardPool();
     error TransferFailed();
     error StillLocked();
+    error RewardPoolExhausted();
 
     // ============================================================
     //  CONSTRUCTOR
@@ -159,16 +158,30 @@ contract WalletStaking is Ownable, ReentrancyGuard, Pausable {
     // ============================================================
     //  STAKING FUNCTIONS
     // ============================================================
-
     function stake(uint256 poolId, uint256 amount) external nonReentrant whenNotPaused {
-        if (poolId >= pools.length) revert PoolNotFound();
+        if (poolId >= pools.length) revert PoolNotFound();  // check pool tồn tại
         StakingPool storage pool = pools[poolId];
-        if (!pool.isActive) revert PoolInactive();
-        if (amount < pool.minStake) revert AmountTooLow();
+        
+        if (!pool.isActive) revert PoolInactive();  // check pool đang active
+        if (amount < pool.minStake) revert AmountTooLow();  // check amount trong khoảng phù hợp
         if (pool.maxStake > 0 && amount > pool.maxStake) revert AmountTooHigh();
 
+        // Tính toán phần thưởng dự kiến tối đa cho lượt stake này
+        uint256 duration = pool.lockDuration > 0 ? pool.lockDuration : 365 days;
+        uint256 estimatedReward = (amount * pool.apr * duration) / (SECONDS_IN_YEAR * BASIS_POINTS);
+
+        // Kiểm tra xem pool thưởng hiện tại có đủ để trả cho tổng nợ cũ + nợ mới không
+        if (totalRewardDebt + estimatedReward > rewardPoolBalance) {
+            revert RewardPoolExhausted();
+        }
+
+        // Cập nhật nợ thưởng toàn hệ thống
+        totalRewardDebt += estimatedReward;
+
+        // Thực hiện chuyển token từ user vào contract
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
 
+        // Lưu thông tin stake
         uint256 stakeId = userStakeCount[msg.sender];
         userStakes[msg.sender][stakeId] = StakeInfo({
             poolId: poolId,
@@ -179,6 +192,7 @@ contract WalletStaking is Ownable, ReentrancyGuard, Pausable {
             isActive: true
         });
 
+        // Cập nhật các chỉ số thống kê
         userStakeCount[msg.sender]++;
         pool.totalStaked += amount;
         totalStaked += amount;
@@ -192,36 +206,54 @@ contract WalletStaking is Ownable, ReentrancyGuard, Pausable {
 
         StakingPool storage pool = pools[stake_.poolId];
         
-        // Tính reward trước khi cập nhật state
-        uint256 reward = _calculateReward(msg.sender, stakeId);
-        uint256 totalToClaim = stake_.pendingReward + reward;
+        // Kiểm tra trạng thái rút sớm
+        bool isEarly = block.timestamp < stake_.stakedAt + pool.lockDuration;
+        
+        // Tính toán Reward
+        uint256 totalToClaim = 0;
+        if (!isEarly) {
+            // Chỉ tính lãi nếu người dùng rút đúng hạn hoặc pool linh hoạt (lockDuration = 0)
+            uint256 reward = _calculateReward(msg.sender, stakeId);
+            totalToClaim = stake_.pendingReward + reward;
+        }
 
+        // Giải phóng nợ dự kiến (Debt Release) để hồi lại hạn mức cho hệ thống
+        uint256 duration = pool.lockDuration > 0 ? pool.lockDuration : 365 days;
+        uint256 committedReward = (stake_.amount * pool.apr * duration) / (SECONDS_IN_YEAR * BASIS_POINTS);
+        
+        if (totalRewardDebt >= committedReward) {
+            totalRewardDebt -= committedReward;
+        }
+
+        // Xử lý phí phạt (Penalty) nếu rút sớm
         uint256 penalty = 0;
-        if (block.timestamp < stake_.stakedAt + pool.lockDuration) {
+        if (isEarly) {
             penalty = (stake_.amount * pool.penaltyRate) / BASIS_POINTS;
         }
 
         uint256 amountToReturn = stake_.amount - penalty;
-
-        // Cập nhật state (CEI)
-        pool.totalStaked -= stake_.amount;
-        totalStaked -= stake_.amount;
-        stake_.isActive = false;
         uint256 originalAmount = stake_.amount;
+
+        // Cập nhật trạng thái (State Updates)
+        pool.totalStaked -= originalAmount;
+        totalStaked -= originalAmount;
+        stake_.isActive = false;
         stake_.amount = 0;
         stake_.pendingReward = 0;
 
-        // Trả token gốc
         stakingToken.safeTransfer(msg.sender, amountToReturn);
 
-        // Trả reward nếu đủ pool
-        if (totalToClaim > 0 && rewardPoolBalance >= totalToClaim) {
-            rewardPoolBalance -= totalToClaim;
-            totalRewardClaimed[msg.sender] += totalToClaim;
-            rewardToken.safeTransfer(msg.sender, totalToClaim);
-            emit RewardClaimed(msg.sender, stakeId, totalToClaim);
+        // Trả reward nếu có 
+        if (totalToClaim > 0) {
+            if (rewardPoolBalance >= totalToClaim) {
+                rewardPoolBalance -= totalToClaim;
+                totalRewardClaimed[msg.sender] += totalToClaim;
+                rewardToken.safeTransfer(msg.sender, totalToClaim);
+                emit RewardClaimed(msg.sender, stakeId, totalToClaim);
+            } else {
+                revert InsufficientRewardPool(); 
+            }
         }
-
         emit Unstaked(msg.sender, stakeId, originalAmount, penalty);
     }
 
@@ -229,38 +261,32 @@ contract WalletStaking is Ownable, ReentrancyGuard, Pausable {
         StakeInfo storage stake_ = userStakes[msg.sender][stakeId];
         if (!stake_.isActive) revert StakeNotActive();
 
+        // Tính reward tích lũy từ lần claim/stake cuối đến hiện tại
         uint256 reward = _calculateReward(msg.sender, stakeId);
         uint256 totalToClaim = stake_.pendingReward + reward;
 
         if (totalToClaim == 0) return;
+        
+        // Kiểm tra thanh khoản của Pool thưởng
         if (rewardPoolBalance < totalToClaim) revert InsufficientRewardPool();
 
+        // Vì người dùng đã nhận thưởng thực tế, ta trừ số này vào tổng nợ dự kiến
+        if (totalRewardDebt >= totalToClaim) 
+            totalRewardDebt -= totalToClaim;
+        else 
+            totalRewardDebt = 0; 
+        
+
+        // Cập nhật trạng thái người dùng và hệ thống
         stake_.pendingReward = 0;
         stake_.lastClaimAt = block.timestamp;
+        
         rewardPoolBalance -= totalToClaim;
         totalRewardClaimed[msg.sender] += totalToClaim;
 
+        // 4. Chuyển token và bắn event
         rewardToken.safeTransfer(msg.sender, totalToClaim);
         emit RewardClaimed(msg.sender, stakeId, totalToClaim);
-    }
-
-    function emergencyWithdraw(uint256 stakeId) external nonReentrant {
-        StakeInfo storage stake_ = userStakes[msg.sender][stakeId];
-        if (!stake_.isActive) revert StakeNotActive();
-
-        StakingPool storage pool = pools[stake_.poolId];
-        uint256 penalty = (stake_.amount * pool.penaltyRate) / BASIS_POINTS;
-        uint256 amountToReturn = stake_.amount - penalty;
-
-        pool.totalStaked -= stake_.amount;
-        totalStaked -= stake_.amount;
-        stake_.isActive = false;
-        uint256 originalAmount = stake_.amount;
-        stake_.amount = 0;
-        stake_.pendingReward = 0;
-
-        stakingToken.safeTransfer(msg.sender, amountToReturn);
-        emit EmergencyWithdrawn(msg.sender, stakeId, originalAmount);
     }
 
     // ============================================================
