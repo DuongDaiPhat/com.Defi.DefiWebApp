@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { UserStake, StakingPool, LockStatus } from '../types/staking.types';
+import type { UserStake, LockStatus } from '../types/staking.types';
 import { apiClient } from '../lib/api';
 
 // Minimal ABI for WalletStaking contract - adjust address as needed
@@ -8,7 +8,6 @@ const WALLET_STAKING_ABI = [
   'function stake(uint256 poolId, uint256 amount) external',
   'function unstake(uint256 stakeId) external',
   'function claimReward(uint256 stakeId) external',
-  'function emergencyWithdraw(uint256 stakeId) external',
   'function getPendingReward(address user, uint256 stakeId) external view returns (uint256)',
   'function getAllPools() external view returns (tuple(uint256 id, string name, uint256 apr, uint256 lockDuration, uint256 penaltyRate, uint256 minStake, uint256 maxStake, uint256 totalStaked, bool isActive)[])',
   'function userStakes(address user, uint256 stakeId) external view returns (uint256 poolId, uint256 amount, uint256 stakedAt, uint256 lastClaimAt, uint256 pendingReward, bool isActive)',
@@ -42,7 +41,6 @@ interface UseWalletStakingReturn extends UseWalletStakingState {
   stake: (poolId: number, amount: string) => Promise<string>; // returns tx hash
   unstake: (stakeId: number) => Promise<string>;
   claimReward: (stakeId: number) => Promise<string>;
-  emergencyWithdraw: (stakeId: number) => Promise<string>;
   getUserStakes: () => Promise<void>;
   getPendingReward: (stakeId: number) => Promise<string>;
   checkLockStatus: (stakeId: number) => Promise<LockStatus>;
@@ -202,29 +200,6 @@ export function useWalletStaking(userAddress: string | null): UseWalletStakingRe
     [getContract, userAddress]
   );
 
-  const emergencyWithdraw = useCallback(
-    async (stakeId: number): Promise<string> => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const contract = await getContract();
-        const tx = await contract.emergencyWithdraw(stakeId);
-        const receipt = await tx.wait();
-
-        await getUserStakes();
-        return receipt.hash;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Emergency withdraw failed';
-        setError(msg);
-        throw new Error(msg);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [getContract]
-  );
-
   const getUserStakes = useCallback(async () => {
     if (!userAddress) return;
 
@@ -289,7 +264,6 @@ export function useWalletStaking(userAddress: string | null): UseWalletStakingRe
     stake,
     unstake,
     claimReward,
-    emergencyWithdraw,
     getUserStakes,
     getPendingReward,
     checkLockStatus,
