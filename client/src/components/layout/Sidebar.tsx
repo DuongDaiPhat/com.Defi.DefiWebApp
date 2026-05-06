@@ -1,7 +1,7 @@
 import { useLocation, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, ArrowLeftRight, Landmark,
-  ChevronLeft, ChevronRight 
+  ChevronLeft, ChevronRight, History
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/swap', label: 'Swap', icon: ArrowLeftRight },
   { path: '/stake', label: 'Staking', icon: Landmark },
+  { path: '/history', label: 'History', icon: History },
 ];
 
 interface SidebarProps {

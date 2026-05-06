@@ -58,7 +58,7 @@ export function useWalletStaking(userAddress: string | null): UseWalletStakingRe
     if (!WALLET_STAKING_ADDRESS) {
       throw new Error('Contract address not configured');
     }
-    const provider = new ethers.BrowserProvider(window.ethereum as any);
+    const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
     const signer = await provider.getSigner();
     return new ethers.Contract(WALLET_STAKING_ADDRESS, WALLET_STAKING_ABI, signer);
   }, [userAddress]);
@@ -66,7 +66,7 @@ export function useWalletStaking(userAddress: string | null): UseWalletStakingRe
   const getTokenContract = useCallback(async () => {
     if (!window.ethereum) throw new Error('Wallet not connected');
     if (!STAKING_TOKEN_ADDRESS) throw new Error('Token address not configured');
-    const provider = new ethers.BrowserProvider(window.ethereum as any);
+    const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
     const signer = await provider.getSigner();
     return new ethers.Contract(STAKING_TOKEN_ADDRESS, ERC20_ABI, signer);
   }, []);

@@ -94,6 +94,14 @@ public class DecisionEngineService {
             }
 
             log.info("[DecisionEngine] KẾT QUẢ — α = {} (raw={})", alphaLong, alphaRaw);
+            System.out.println("\n=======================================================");
+            System.out.println("[DecisionEngine DEBUG]");
+            System.out.println("alpha:       " + alphaLong);
+            System.out.println("delta:       " + deltaFinal);
+            System.out.println("Z_Score:     " + OsvaConfig.Z_SCORE);
+            System.out.println("M_imbalance: " + imbalance);
+            System.out.println("M_depth:     " + depthFactor);
+            System.out.println("=======================================================\n");
             return alphaLong;
 
         } catch (ArithmeticException e) {

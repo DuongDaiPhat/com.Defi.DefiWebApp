@@ -34,7 +34,7 @@ export function useWeb3() {
 
         const checkConnection = async () => {
             if (window.ethereum) {
-                const provider = new ethers.BrowserProvider(window.ethereum as any);
+                const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
                 const accounts = await provider.listAccounts();
                 if (accounts.length > 0) {
                     const address = await accounts[0].getAddress();
@@ -62,14 +62,14 @@ export function useWeb3() {
         };
     }, []);
 
-    const connect = useCallback(async (walletProvider?: string, walletAddress?: string) => {
+    const connect = useCallback(async () => {
         try {
             if (!window.ethereum) {
                 alert("Metamask is not installed!");
                 return;
             }
 
-            const provider = new ethers.BrowserProvider(window.ethereum as any);
+            const provider = new ethers.BrowserProvider(window.ethereum as ethers.Eip1193Provider);
 
             // Request account access
             const accounts = await provider.send("eth_requestAccounts", []);

@@ -102,12 +102,12 @@ const CONTRACT_ADDRESSES = {
 export function useDashboardMock() {
   const [tokens] = useState<Token[]>(MOCK_TOKENS);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [staking, setStaking] = useState<StakingInfo>({
+  const [staking, setStaking] = useState<StakingInfo>(() => ({
     totalStaked: 500,
     apy: 15.6,
     pendingRewards: 12.5,
     nextDistribution: Date.now() + 3600000 * 4, // 4 hours from now
-  });
+  }));
   const [analytics] = useState<AnalyticsData>(MOCK_ANALYTICS);
   const [isSwapping, setIsSwapping] = useState(false);
   const [isStaking, setIsStaking] = useState(false);

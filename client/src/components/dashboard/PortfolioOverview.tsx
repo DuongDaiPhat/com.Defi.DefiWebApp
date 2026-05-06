@@ -14,7 +14,7 @@ export const PortfolioOverview = memo(function PortfolioOverview({ totalUSD, bre
   const isPositive = change24h >= 0;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const onPieEnter = (_: any, index: number) => {
+  const onPieEnter = (_: unknown, index: number) => {
     setActiveIndex(index);
   };
 
@@ -54,14 +54,15 @@ export const PortfolioOverview = memo(function PortfolioOverview({ totalUSD, bre
                 onMouseLeave={onPieLeave}
                 animationDuration={300}
                 animationBegin={0}
-                label={(props: any) => {
+                label={(props: { index?: number; cx?: number; cy?: number; outerRadius?: number; midAngle?: number; value?: number }) => {
                   const isActive = props.index === activeIndex;
-                  if (!isActive) return null;
+                  if (!isActive || props.cx === undefined || props.cy === undefined || props.outerRadius === undefined || props.value === undefined) return null;
 
                   const RADIAN = Math.PI / 180;
-                  const radius = 35 + props.outerRadius; // Push pill further out so it doesn't overlap chart
-                  const x = props.cx + radius * Math.cos(-props.midAngle * RADIAN);
-                  const y = props.cy + radius * Math.sin(-props.midAngle * RADIAN);
+                  const radius = 35 + props.outerRadius;
+                  const midAngle = props.midAngle ?? 0;
+                  const x = props.cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = props.cy + radius * Math.sin(-midAngle * RADIAN);
                   
                   return (
                     <motion.g
