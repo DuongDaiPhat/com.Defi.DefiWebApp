@@ -83,7 +83,6 @@ remix-slither-report.json
 .agent/
 .antigravity/
 .turbo/
-.cache/
 .eslintcache
 
 # Agent (Crucial)
