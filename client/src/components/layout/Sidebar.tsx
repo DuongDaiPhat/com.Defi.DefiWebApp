@@ -1,13 +1,15 @@
 import { useLocation, Link } from 'react-router-dom';
 import { 
-  LayoutDashboard, ArrowLeftRight, Landmark, Server,
-  ChevronLeft, ChevronRight 
+  LayoutDashboard, Landmark, Server,
+  ChevronLeft, ChevronRight, Zap, Droplets, Activity
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/swap', label: 'Swap (AMM)', icon: ArrowLeftRight },
+  { path: '/swap', label: 'OSVA Swap', icon: Zap },
+  { path: '/liquidity', label: 'Liquidity', icon: Droplets },
+  { path: '/osva', label: 'Oracle Dashboard', icon: Activity },
   { path: '/vault', label: 'Vault (dvSKT)', icon: Server },
   { path: '/stake', label: 'Strategy Direct', icon: Landmark },
 ];
