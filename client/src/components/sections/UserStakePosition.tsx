@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { UserStake } from '../../types/staking.types';
+import { useState } from 'react';
+import type { UserStake } from '../../types/staking.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Clock, TrendingUp } from 'lucide-react';
 
 interface UserStakePositionProps {
   stake: UserStake;

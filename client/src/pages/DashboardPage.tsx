@@ -5,6 +5,7 @@ import { TransactionMonitor } from '../components/dashboard/TransactionMonitor';
 import { AnalyticsSection } from '../components/dashboard/AnalyticsSection';
 import { TestingTools } from '../components/dashboard/TestingTools';
 import { PoolsTable } from '../components/dashboard/PoolsTable';
+import { OsvaDashboard } from '../components/dashboard/OsvaDashboard';
 
 const TABS = [
   { key: 'tokens', label: 'Tokens' },
@@ -62,7 +63,12 @@ export function DashboardPage() {
         </div>
       )}
 
-      {activeTab === 'pools' && <PoolsTable />}
+      {activeTab === 'pools' && (
+        <div className="space-y-6">
+          <PoolsTable />
+          <OsvaDashboard />
+        </div>
+      )}
 
       {activeTab === 'transactions' && (
         <TransactionMonitor transactions={transactions} />

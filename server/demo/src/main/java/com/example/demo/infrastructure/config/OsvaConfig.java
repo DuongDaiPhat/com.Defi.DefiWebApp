@@ -58,10 +58,10 @@ public class OsvaConfig {
     // ============================================================
 
     /** Địa chỉ contract OSVAPool đã deploy trên Sepolia (dùng cho verifyingContract EIP-712) */
-    private String poolAddress = "";
+    private String poolAddress = "0xbd2B2030c82DD76bbEe0F361525Ac36b5A6d6484";
 
     /** Private Key của Oracle Signer (hex, không có prefix 0x) */
-    private String oraclePrivateKey = "";
+    private String oraclePrivateKey = "78384bb0388563c5fde828378b0d402894134656429b51b4466103619446586";
 
     /** Chain ID của mạng (Sepolia = 11155111) */
     private long chainId = 11155111L;

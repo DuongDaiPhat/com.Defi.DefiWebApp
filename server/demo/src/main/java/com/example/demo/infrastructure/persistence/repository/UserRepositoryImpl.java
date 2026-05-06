@@ -7,13 +7,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+
+/**
+ * UserRepositoryImpl — Cập nhật import để đảm bảo nhận diện class User từ Kotlin.
+ */
 @Repository
 @RequiredArgsConstructor
-public class UserrepositoryIml implements UserRepository {
+public class UserRepositoryImpl implements UserRepository {
+
     private final UserJpaRepository jpaRepository;
 
     @Override
     public Optional<User> findByWalletAddress(String walletAddress) {
+        // Đảm bảo kiểu trả về khớp với Optional<com.example.demo.infrastructure.persistence.entity.User>
         return jpaRepository.findByWalletAddress(walletAddress);
     }
 

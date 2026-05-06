@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { StakingPool } from '../../types/staking.types';
+import type { StakingPool } from '../../types/staking.types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { AlertCircle, Plus } from 'lucide-react';
@@ -52,7 +52,7 @@ export function StakingForm({ pools, onStake, isLoading = false, error }: Stakin
       }
 
       return true;
-    } catch (err) {
+    } catch {
       setLocalError('Invalid amount');
       return false;
     }

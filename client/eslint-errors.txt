@@ -1,0 +1,51 @@
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\components\dashboard\PortfolioOverview.tsx
+  17:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\components\dashboard\SwapModule.tsx
+  126:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  128:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\components\sections\StakingForm.tsx
+  55:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\components\sections\StakingPoolCard.tsx
+  1:17  error  'useState' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\components\sections\UserStakePosition.tsx
+  5:29  error  'AlertCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\components\ui\ConnectWalletPopover.tsx
+  88:6  warning  React Hook useEffect has a missing dependency: 'addWalletListener'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\hooks\useDashboardMock.ts
+  109:23  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\hooks\useDashboardMock.ts:109:23
+  107 |     apy: 15.6,
+  108 |     pendingRewards: 12.5,
+> 109 |     nextDistribution: Date.now() + 3600000 * 4, // 4 hours from now
+      |                       ^^^^^^^^^^ Cannot call impure function
+  110 |   });
+  111 |   const [analytics] = useState<AnalyticsData>(MOCK_ANALYTICS);
+  112 |   const [isSwapping, setIsSwapping] = useState(false);  react-hooks/purity
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\hooks\useWalletStaking.ts
+   61:68  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   69:68  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+  132:5   warning  React Hook useCallback has a missing dependency: 'getUserStakes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  166:5   warning  React Hook useCallback has a missing dependency: 'getUserStakes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  200:5   warning  React Hook useCallback has a missing dependency: 'getUserStakes'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DEFI-NCKH\com.Defi.DefiWebApp\client\src\hooks\useWeb3.ts
+  37:80  error  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  51:33  error  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  65:40  error  'walletProvider' is defined but never used  @typescript-eslint/no-unused-vars
+  65:65  error  'walletAddress' is defined but never used   @typescript-eslint/no-unused-vars
+  72:76  error  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+
+??? 19 problems (15 errors, 4 warnings)
+

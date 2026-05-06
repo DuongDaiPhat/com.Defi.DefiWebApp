@@ -1,11 +1,12 @@
 import { useSearchParams } from 'react-router-dom';
-import { useDashboardMock } from '../hooks/useDashboardMock';
 import { SwapModule } from '../components/dashboard/SwapModule';
 import { LimitOrderModule } from '../components/dashboard/LimitOrderModule';
 import { BuySellModule } from '../components/dashboard/BuySellModule';
+import { LiquidityPanel } from '../components/dashboard/LiquidityPanel';
 
 const TABS = [
   { key: 'swap', label: 'Swap' },
+  { key: 'liquidity', label: 'Liquidity' },
   { key: 'limit', label: 'Limit' },
   { key: 'buy', label: 'Buy' },
   { key: 'sell', label: 'Sell' },
@@ -14,13 +15,6 @@ const TABS = [
 export function SwapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'swap';
-
-  const {
-    tokens, exchangeRate, gasEstimate,
-    slippage, setSlippage,
-    isSwapping, performSwap,
-    transactions,
-  } = useDashboardMock();
 
   return (
     <div className="py-4">
@@ -44,18 +38,8 @@ export function SwapPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'swap' && (
-        <SwapModule
-          tokens={tokens}
-          exchangeRate={exchangeRate}
-          gasEstimate={gasEstimate}
-          slippage={slippage}
-          setSlippage={setSlippage}
-          isSwapping={isSwapping}
-          performSwap={performSwap}
-          transactions={transactions}
-        />
-      )}
+      {activeTab === 'swap' && <SwapModule />}
+      {activeTab === 'liquidity' && <LiquidityPanel />}
       {activeTab === 'limit' && <LimitOrderModule />}
       {activeTab === 'buy' && <BuySellModule mode="buy" />}
       {activeTab === 'sell' && <BuySellModule mode="sell" />}
